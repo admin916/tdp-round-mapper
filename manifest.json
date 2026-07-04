@@ -1,0 +1,11 @@
+{
+  "name": "TDP — Train Don't Play",
+  "short_name": "TDP",
+  "description": "Round Mapper — ultra-detailed golf shot mapping and course intelligence.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c1014",
+  "theme_color": "#0c1014"
+}

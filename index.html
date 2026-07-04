@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0c1014" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="TDP" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link rel="manifest" href="manifest.json" />
+<title>TDP · Train Don't Play — Round Mapper</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ══════════ TOP BAR ══════════ -->
+<header id="topbar">
+  <div class="brand">
+    <span class="brand-mark">TDP</span>
+    <span class="brand-sub">TRAIN&nbsp;DON'T&nbsp;PLAY</span>
+  </div>
+  <div class="round-meta">
+    <div class="rm-player" id="metaPlayer">James Slate</div>
+    <div class="rm-course" id="metaCourse">Real Club Valderrama · White Tees · 03/07/2026</div>
+  </div>
+  <div class="weather" id="weatherBar">
+    <span class="wx-loading">fetching conditions…</span>
+  </div>
+  <div class="top-actions">
+    <button class="btn ghost" id="btnCourses" title="Choose course">⛳&nbsp;Course</button>
+    <button class="btn ghost" id="btnReset" title="Clear all round data">Reset</button>
+    <button class="btn ghost" id="btnExport">Export&nbsp;JSON</button>
+    <button class="btn ghost" id="btnImport">📷&nbsp;Import</button>
+    <button class="btn gold" id="btnCard">Extended&nbsp;Card</button>
+    <button class="btn primary" id="btnSummary">Round&nbsp;Report</button>
+  </div>
+</header>
+
+<div id="layout">
+
+  <!-- ══════════ HOLE RAIL ══════════ -->
+  <nav id="holerail"></nav>
+
+  <!-- ══════════ MAP ══════════ -->
+  <main id="mapwrap">
+    <div id="map"></div>
+    <div id="mapHud">
+      <div class="hud-hole">
+        <div class="hud-hole-core">
+          <div class="hud-num" id="hudNum">1</div>
+          <div class="hud-facts" id="hudFacts">PAR 4 · 339m · SI 11</div>
+        </div>
+      </div>
+      <div class="hud-wind" id="hudWind" title="Wind relative to this hole"></div>
+    </div>
+    <div id="mapTools">
+      <button class="map-btn" id="btnCourse" title="See the whole course">⤢&nbsp;Course</button>
+      <button class="map-btn" id="btnHole" title="Zoom to this hole">⚑&nbsp;Hole</button>
+    </div>
+    <div id="mapHint">Tap a hole above · tap the map to add a shot · drag any point to adjust · pinch to zoom</div>
+  </main>
+
+  <!-- ══════════ SHOT PANEL ══════════ -->
+  <aside id="panel">
+    <div class="sheet-handle" id="sheetHandle"><span class="sh-label" id="sheetLabel">Tap to log shots</span></div>
+    <section class="panel-block" id="shotBlock">
+      <div class="pb-head">
+        <h2>Shots</h2>
+        <span class="pb-score" id="holeScorePill"></span>
+      </div>
+      <ol id="shotList"></ol>
+      <div class="shot-actions">
+        <button class="btn tiny ghost" id="btnUndoShot">Remove last shot</button>
+        <button class="btn tiny ghost" id="btnReseed">Reset hole route</button>
+      </div>
+    </section>
+
+    <section class="panel-block" id="editorBlock">
+      <div class="pb-head"><h2 id="editorTitle">Shot 1</h2><span id="editorDist" class="pb-dist"></span></div>
+
+      <label class="field-label">Club</label>
+      <div class="club-grid" id="clubGrid"></div>
+
+      <label class="field-label">Shape</label>
+      <div class="seg" id="segShape"></div>
+
+      <label class="field-label">Flight</label>
+      <div class="seg" id="segHeight"></div>
+
+      <label class="field-label">Lie <span class="auto-tag" id="lieAutoTag">auto-detected</span></label>
+      <div class="seg wrap" id="segLie"></div>
+      <div class="seg" id="segCond"></div>
+    </section>
+
+    <section class="panel-block" id="greenBlock">
+      <div class="pb-head"><h2>Green · Pin</h2><span class="pb-dist" id="pinInfo"></span></div>
+      <div id="greenSvgWrap"></div>
+      <div class="quad-row" id="quadLabels"></div>
+      <div class="green-stats">
+        <div class="gs-item">
+          <label class="field-label">Putts</label>
+          <div class="stepper" id="puttStepper">
+            <button data-d="-1">−</button><span id="puttVal">2</span><button data-d="1">+</button>
+          </div>
+        </div>
+        <div class="gs-item">
+          <label class="field-label">Penalties</label>
+          <div class="stepper" id="penStepper">
+            <button data-d="-1">−</button><span id="penVal">0</span><button data-d="1">+</button>
+          </div>
+        </div>
+        <div class="gs-item">
+          <label class="field-label">1st putt (m)</label>
+          <input type="number" id="firstPutt" min="0" max="40" step="0.5" placeholder="—" />
+        </div>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<!-- ══════════ COURSE SELECT MODAL ══════════ -->
+<div id="courseModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h1>Choose Course</h1>
+        <div class="modal-sub">Valderrama is fully mapped for this demo. More courses load from TDP's course library — OpenStreetMap geometry + the 25,000-course API.</div>
+      </div>
+      <div><button class="btn ghost" id="btnCloseCourse">Close</button></div>
+    </div>
+    <input type="text" id="courseSearch" class="course-search" placeholder="Search a course…" />
+    <div id="courseList"></div>
+  </div>
+</div>
+
+<!-- ══════════ IMPORT MODAL ══════════ -->
+<div id="importModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h1>Import Round Photos</h1>
+        <div class="modal-sub">Photograph the pin sheet and the finished extended scorecard.
+          Use as many shots as needed to capture all the detail — close-ups of each nine work well.</div>
+      </div>
+      <div><button class="btn ghost" id="btnCloseImport">Close</button></div>
+    </div>
+
+    <div class="bucket" data-bucket="pins">
+      <div class="bucket-head"><h3>Pin Sheet</h3><span class="bucket-count" id="countPins"></span></div>
+      <div class="thumb-row" id="thumbsPins">
+        <label class="add-tile" for="filePins">＋<span>add photo</span></label>
+      </div>
+      <input type="file" id="filePins" accept="image/*" multiple hidden />
+    </div>
+
+    <div class="bucket" data-bucket="card">
+      <div class="bucket-head"><h3>Extended Scorecard</h3><span class="bucket-count" id="countCard"></span></div>
+      <div class="thumb-row" id="thumbsCard">
+        <label class="add-tile" for="fileCard">＋<span>add photo</span></label>
+      </div>
+      <input type="file" id="fileCard" accept="image/*" multiple hidden />
+    </div>
+
+    <div class="import-foot">
+      <span id="ocrStatus" class="ocr-status"></span>
+      <button class="btn primary" id="btnRunOcr" disabled>Run OCR draft</button>
+    </div>
+    <div class="import-note">PoC note: OCR here is simulated with the pre-transcribed reading of this
+      round's card. In production this step calls the TDP vision service with the uploaded images.</div>
+  </div>
+</div>
+
+<!-- ══════════ LIGHTBOX ══════════ -->
+<div id="lightbox" class="hidden"><img id="lightboxImg" alt="source photo" /></div>
+
+<!-- ══════════ EXTENDED CARD MODAL ══════════ -->
+<div id="cardModal" class="modal hidden">
+  <div class="modal-card wide">
+    <div class="modal-head">
+      <div>
+        <h1>Extended Card</h1>
+        <div class="modal-sub">OCR draft from the photographed card — review and correct.
+          <span class="conf-legend">■</span> = low-confidence read. Edits re-plot the hole instantly.
+          Distances as written by the player (<b>yards</b>, putts in feet); the map plots in metres.</div>
+      </div>
+      <div><button class="btn ghost" id="btnCloseCard">Close</button></div>
+    </div>
+    <div id="cardSources"></div>
+    <div id="cardBody"></div>
+  </div>
+</div>
+
+<!-- ══════════ SUMMARY MODAL ══════════ -->
+<div id="summaryModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h1>Round Report</h1>
+        <div class="modal-sub" id="reportSub"></div>
+      </div>
+      <div>
+        <button class="btn ghost" id="btnPrint">Print / PDF</button>
+        <button class="btn ghost" id="btnCloseSummary">Close</button>
+      </div>
+    </div>
+    <div id="reportBody"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="data/course-data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
