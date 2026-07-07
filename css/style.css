@@ -382,6 +382,10 @@ table.scoretable { width: 100%; border-collapse: collapse; font-size: 12px; marg
   background: rgba(255, 255, 255, 0.025); border: 1px solid var(--line); border-radius: 11px;
 }
 .src-strip.empty { font-size: 11.5px; color: var(--txt-3); }
+.card-banner { font-size: 12px; line-height: 1.5; padding: 10px 13px; border-radius: 11px; margin-bottom: 12px; }
+.card-banner b { font-weight: 700; }
+.card-banner.ok { background: var(--accent-soft); border: 1px solid rgba(35,198,139,0.4); color: var(--txt); }
+.card-banner.warn { background: var(--gold-soft); border: 1px solid rgba(216,180,90,0.45); color: var(--txt); }
 .src-thumb {
   width: 64px; height: 64px; object-fit: cover; border-radius: 8px;
   border: 1px solid var(--line-2); cursor: zoom-in; transition: transform 0.13s;
@@ -440,6 +444,25 @@ table.scoretable { width: 100%; border-collapse: collapse; font-size: 12px; marg
   :root { --txt: #111; --txt-2: #444; --txt-3: #666; --line: #ddd; }
   .stat-card, .bar-track { background: #f4f6f8; border-color: #ddd; }
 }
+
+/* ═══════════ caddie chat ═══════════ */
+.chat-card { width: min(560px, 100%); display: flex; flex-direction: column; max-height: min(80vh, 720px); }
+.chat-cfg { border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; margin-bottom: 10px; background: rgba(255,255,255,0.02); }
+.chat-cfg.hidden { display: none; }
+.cfg-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.cfg-row label { font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--txt-3); width: 70px; }
+.cfg-in { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid var(--line); border-radius: 8px; color: var(--txt); font: inherit; font-size: 12.5px; padding: 7px 9px; outline: none; }
+.cfg-in:focus { border-color: var(--accent); }
+.cfg-hint { font-size: 10px; color: var(--txt-3); line-height: 1.5; }
+.chat-log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px 2px; min-height: 220px; }
+.chat-msg { max-width: 82%; padding: 9px 13px; border-radius: 14px; font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; }
+.chat-msg.me { align-self: flex-end; background: var(--accent); color: #052018; border-bottom-right-radius: 5px; font-weight: 500; }
+.chat-msg.bot { align-self: flex-start; background: rgba(255,255,255,0.05); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
+.chat-msg.thinking { color: var(--txt-3); font-style: italic; letter-spacing: 3px; }
+.chat-msg.err { background: rgba(226,87,79,0.12); border-color: rgba(226,87,79,0.4); color: #f0a9a3; font-size: 12px; }
+.chat-composer { display: flex; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.chat-text { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--line-2); border-radius: 11px; color: var(--txt); font: inherit; padding: 11px 13px; outline: none; }
+.chat-text:focus { border-color: var(--accent); }
 
 /* ═══════════ course select ═══════════ */
 .btn.gold { color: var(--gold); border-color: rgba(216, 180, 90, 0.45); background: var(--gold-soft); }
@@ -551,7 +574,8 @@ table.scoretable { width: 100%; border-collapse: collapse; font-size: 12px; marg
   .scoretable { font-size: 9.5px; margin-top: 2px; }
   .scoretable th, .scoretable td { padding: 3px 1px; }
   .score-chip { min-width: 16px; padding: 1px 3px; font-size: 9.5px; }
-  .scoretable tr:nth-child(3), .scoretable tr:nth-child(4), .scoretable tr:nth-child(7) { display: none; }
+  /* hide Yards/Metres (3), SI (4), Pin (8) on phone — keep Par, Club, Score, Putts */
+  .scoretable tr:nth-child(3), .scoretable tr:nth-child(4), .scoretable tr:nth-child(8) { display: none; }
   #reportBody br { display: none; }
   #reportBody table + table { margin-top: 8px; }
   .report-cols { grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }

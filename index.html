@@ -31,6 +31,8 @@
   </div>
   <div class="top-actions">
     <button class="btn ghost" id="btnCourses" title="Choose course">⛳&nbsp;Course</button>
+    <button class="btn ghost" id="btnChat" title="Chat with the course caddie (local Hermes)">💬&nbsp;Caddie</button>
+    <button class="btn ghost" id="btnUnits" title="Switch yards / metres">yd</button>
     <button class="btn ghost" id="btnReset" title="Clear all round data">Reset</button>
     <button class="btn ghost" id="btnExport">Export&nbsp;JSON</button>
     <button class="btn ghost" id="btnImport">📷&nbsp;Import</button>
@@ -93,6 +95,9 @@
       <label class="field-label">Lie <span class="auto-tag" id="lieAutoTag">auto-detected</span></label>
       <div class="seg wrap" id="segLie"></div>
       <div class="seg" id="segCond"></div>
+
+      <label class="field-label">Lie quality</label>
+      <div class="seg" id="segQual"></div>
     </section>
 
     <section class="panel-block" id="greenBlock">
@@ -113,12 +118,56 @@
           </div>
         </div>
         <div class="gs-item">
-          <label class="field-label">1st putt (m)</label>
-          <input type="number" id="firstPutt" min="0" max="40" step="0.5" placeholder="—" />
+          <label class="field-label">1st putt (ft)</label>
+          <input type="number" id="firstPutt" min="0" max="99" step="1" placeholder="—" />
         </div>
       </div>
     </section>
+
+    <section class="panel-block" id="shortGameBlock" style="display:none">
+      <div class="pb-head"><h2>Short Game</h2><span class="pb-dist">green missed / not a 1-putt</span></div>
+      <div class="green-stats">
+        <div class="gs-item">
+          <label class="field-label">Chip length (<span class="unit-lbl">yd</span>)</label>
+          <input type="number" id="chipLen" min="0" max="120" step="1" placeholder="—" />
+        </div>
+        <div class="gs-item">
+          <label class="field-label">1st putt (ft)</label>
+          <input type="number" id="chipPutt" min="0" max="99" step="1" placeholder="—" />
+        </div>
+      </div>
+      <label class="field-label">Chip lie</label>
+      <div class="seg wrap" id="segChipLie"></div>
+      <label class="field-label">Chip lie quality</label>
+      <div class="seg" id="segChipQual"></div>
+    </section>
   </aside>
+</div>
+
+<!-- ══════════ CADDIE CHAT MODAL ══════════ -->
+<div id="chatModal" class="modal hidden">
+  <div class="modal-card chat-card">
+    <div class="modal-head">
+      <div>
+        <h1>Course Caddie</h1>
+        <div class="modal-sub">Ask about strategy, club choice, the pin or the wind — grounded in this round. Powered by <b>Gemini</b> via the TDP service.</div>
+      </div>
+      <div style="display:flex; gap:6px">
+        <button class="btn ghost" id="btnChatCfg" title="Model settings">⚙</button>
+        <button class="btn ghost" id="btnCloseChat">Close</button>
+      </div>
+    </div>
+    <div id="chatCfg" class="chat-cfg hidden">
+      <div class="cfg-row"><label>Service</label><input id="chatBase" class="cfg-in" placeholder="http://localhost:4174" /></div>
+      <div class="cfg-row"><label>Model</label><input id="chatModel" class="cfg-in" placeholder="gemini" /></div>
+      <div class="cfg-hint">TDP API layer (holds the Gemini key). Run <code>node tools/api.mjs</code>. For the phone/public site this moves to a Supabase Edge Function.</div>
+    </div>
+    <div id="chatLog" class="chat-log"></div>
+    <div class="chat-composer">
+      <input id="chatInput" class="chat-text" placeholder="Ask the caddie…" autocomplete="off" />
+      <button class="btn primary" id="chatSend">Send</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════ COURSE SELECT MODAL ══════════ -->
@@ -213,6 +262,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="data/course-data.js"></script>
+<script src="data/course-sotogrande.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

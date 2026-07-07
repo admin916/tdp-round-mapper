@@ -3,8 +3,48 @@
 (() => {
 "use strict";
 
-const COURSE = window.TDP_COURSE;
-const STORE_KEY = "tdp.round.valderrama.v6";
+/* ── multi-course registry ─────────────────────────────────────────
+   Courses are loaded from a client-side registry. Built-ins ship with
+   the app (Valderrama, Sotogrande); more are built on demand from OSM
+   and cached in localStorage. Switching a course reloads the page so
+   the map + geometry re-init cleanly for the new course. */
+const slug = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const BUILTINS = [window.TDP_COURSE, window.TDP_COURSE_SOTOGRANDE].filter(Boolean);
+function courseIndex() { try { return JSON.parse(localStorage.getItem("tdp.course.index") || "[]"); } catch { return []; } }
+function courseById(id) {
+  for (const c of BUILTINS) if (slug(c.course.name) === id) return c;
+  try { const j = localStorage.getItem("tdp.course.data." + id); if (j) return JSON.parse(j); } catch {}
+  return null;
+}
+function registerCourse(c) {
+  const id = slug(c.course.name);
+  try { localStorage.setItem("tdp.course.data." + id, JSON.stringify(c)); } catch (e) { console.warn("course cache full", e); }
+  const idx = courseIndex();
+  if (!idx.find((e) => e.id === id)) { idx.push({ id, name: c.course.name, location: c.course.location || "" }); localStorage.setItem("tdp.course.index", JSON.stringify(idx)); }
+  return id;
+}
+function activeCourse() {
+  const id = localStorage.getItem("tdp.course.active.id");
+  if (id) { const c = courseById(id); if (c) return c; }
+  return window.TDP_COURSE;
+}
+function switchCourse(id, pendingCard) {
+  localStorage.setItem("tdp.course.active.id", id);
+  if (pendingCard) try { localStorage.setItem("tdp.pending.card", JSON.stringify(pendingCard)); } catch {}
+  location.reload();
+}
+/* fuzzy match an OCR'd course name to a known/registered course id */
+function matchCourseId(name) {
+  if (!name) return null;
+  const n = name.toLowerCase();
+  const all = [...BUILTINS.map((c) => ({ id: slug(c.course.name), name: c.course.name })), ...courseIndex()];
+  const hit = all.find((c) => c.name.toLowerCase().split(/\s+/).filter((w) => w.length > 4).some((w) => n.includes(w)));
+  return hit ? hit.id : null;
+}
+
+const COURSE = activeCourse();
+const COURSE_ID = slug(COURSE.course.name);
+const STORE_KEY = "tdp.round." + COURSE_ID + ".v6";
 const ROUND_DATE = "2026-07-03";
 
 /* ── domain constants ─────────────────────────────────────────────── */
@@ -22,6 +62,29 @@ const LIES = {
   penalty:  { label: "Penalty",     conds: ["Drop Taken"] },
 };
 const QUADS = { FL: "Front Left", FR: "Front Right", BL: "Back Left", BR: "Back Right", FC: "Front Centre", BC: "Back Centre" };
+const QUALITY = ["Good", "OK", "Bad", "Ugly"];
+
+/* ── units: distances stored in metres, shown in yards or metres.
+   Putts are always shown in feet. JS (and most players) use yards. ── */
+const M2YD = 1.09361, M2FT = 3.28084;
+let UNITS = localStorage.getItem("tdp.units") || "yd";
+const setUnits = (u) => { UNITS = u; localStorage.setItem("tdp.units", u); };
+function dist(m) { return m == null || m === "" ? "" : Math.round(UNITS === "yd" ? m * M2YD : m); }   // metres → number in current unit
+function distU(m) { return dist(m) + UNITS; }                                                          // metres → "245yd"
+const toM = (v) => (v === "" || v == null ? null : +v / (UNITS === "yd" ? M2YD : 1));                  // input in current unit → metres
+const ftToM = (v) => (v === "" || v == null ? null : +v / M2FT);
+const mToFt = (m) => (m == null ? "" : Math.round(m * M2FT));
+
+/* API layer base — local dev server on the Mac, or the production endpoint on
+   the public site. Override with localStorage 'tdp.api.base'. The API holds the
+   Gemini key server-side and exposes /ocr and /chat. */
+const PROD_API = "https://iiodbfcmybieytkrjqzf.supabase.co/functions/v1";
+function apiBase() {
+  const o = localStorage.getItem("tdp.api.base");
+  if (o) return o.replace(/\/$/, "");
+  const h = location.hostname;
+  return h === "localhost" || h === "127.0.0.1" || h === "" ? "http://localhost:4174" : PROD_API;
+}
 
 /* ── geo helpers ──────────────────────────────────────────────────── */
 const toRad = (d) => (d * Math.PI) / 180;
@@ -277,6 +340,7 @@ function plotRecorded(hole, rec) {
     const lie = sp.kind.startsWith("tee") ? "tee" : sp.lie;
     shots.push({
       club: sp.club || suggestClub(distM(cur, pin), lie), shape: sp.shape || "Straight", height: sp.height || "Normal",
+      quality: sp.quality || "OK",
       lie, cond: sp.cond ?? (LIES[lie].conds[0] || null), lieAuto: false,
     });
     wps.push(next); cur = next;
@@ -298,7 +362,7 @@ function newShot(fromPt, dist, isTee) {
   const lie = isTee ? "tee" : detectLie(fromPt);
   return {
     club: isTee && dist >= 230 ? "Dr" : suggestClub(dist, lie),
-    shape: "Straight", height: "Normal",
+    shape: "Straight", height: "Normal", quality: "OK",
     lie, cond: LIES[lie].conds[0] || null, lieAuto: true,
   };
 }
@@ -406,7 +470,7 @@ function drawHole(fit) {
     const d = Math.round(distM(wps[i], wps[i + 1]));
     const lbl = L.marker(mid, {
       interactive: false,
-      icon: L.divIcon({ className: "seg-anchor", html: `<div class="seg-label">${d}m<small>${st.shots[i]?.club || ""}</small></div>`, iconSize: [0, 0] }),
+      icon: L.divIcon({ className: "seg-anchor", html: `<div class="seg-label">${distU(d)}<small>${st.shots[i]?.club || ""}</small></div>`, iconSize: [0, 0] }),
     }).addTo(map);
     mapObjs.push(lbl);
   }
@@ -513,17 +577,18 @@ function renderRail() {
 function renderHud() {
   const h = H();
   $("hudNum").textContent = h.num;
-  $("hudFacts").innerHTML = `PAR ${h.par} · ${h.metres}m · SI ${h.si}` +
+  $("hudFacts").innerHTML = `PAR ${h.par} · ${distU(h.metres)} · SI ${h.si}` +
     (round.card[h.num] ? ` · <span style="color:var(--gold)">FROM CARD</span>` : "");
   renderHudWind();
 }
 
 function segBtns(el, options, current, onPick, warnVal) {
+  const warn = Array.isArray(warnVal) ? warnVal : warnVal != null ? [warnVal] : [];
   el.innerHTML = "";
   options.forEach((o) => {
     const b = document.createElement("button");
     b.textContent = o;
-    b.className = o === current ? "on" + (o === warnVal ? " warn" : "") : "";
+    b.className = o === current ? "on" + (warn.includes(o) ? " warn" : "") : "";
     b.onclick = () => onPick(o);
     el.appendChild(b);
   });
@@ -543,9 +608,9 @@ function renderShotList() {
       <span class="sr-num">${i + 1}</span>
       <span class="sr-main">
         <div class="sr-club">${sh.club}<span style="color:var(--txt-3);font-weight:500"> · ${sh.shape} · ${sh.height}</span></div>
-        <div class="sr-detail">${LIES[sh.lie].label}${sh.cond ? " (" + sh.cond + ")" : ""} → ${toPin <= 3 ? "at the pin" : toPin + "m to pin"}</div>
+        <div class="sr-detail">${LIES[sh.lie].label}${sh.cond ? " (" + sh.cond + ")" : ""} · ${sh.quality || "OK"} → ${toPin <= 3 ? "at the pin" : distU(toPin) + " to pin"}</div>
       </span>
-      <span class="sr-dist">${d}m<small>${sh.club === "Putt" ? "putt" : "shot"}</small></span>`;
+      <span class="sr-dist">${distU(d)}<small>${sh.club === "Putt" ? "putt" : "shot"}</small></span>`;
     li.onclick = () => { selShot = i; drawHole(false); renderPanel(); };
     list.appendChild(li);
   });
@@ -561,7 +626,7 @@ function renderEditor() {
   $("editorBlock").style.display = "";
   const from = st.waypoints[selShot], to = st.waypoints[selShot + 1];
   $("editorTitle").textContent = `Shot ${selShot + 1}`;
-  $("editorDist").textContent = Math.round(distM(from, to)) + "m";
+  $("editorDist").textContent = distU(Math.round(distM(from, to)));
 
   const grid = $("clubGrid");
   grid.innerHTML = "";
@@ -584,6 +649,7 @@ function renderEditor() {
   const conds = LIES[sh.lie].conds;
   $("segCond").style.display = conds.length ? "" : "none";
   segBtns($("segCond"), conds, sh.cond, (v) => { sh.cond = v; touch(); renderPanel(); });
+  segBtns($("segQual"), QUALITY, sh.quality || "OK", (v) => { sh.quality = v; touch(); renderPanel(); }, ["Bad", "Ugly"]);
 }
 
 /* green quadrant SVG */
@@ -617,16 +683,40 @@ function renderGreen() {
       <circle class="pin-dot" cx="${X(p.b).toFixed(1)}" cy="${Y(p.a).toFixed(1)}" r="1.8"/>
     </svg>`;
   $("greenSvgWrap").insertAdjacentHTML("beforeend",
-    `<div class="green-caption">FRONT · ${hole.green.depth}m deep × ${hole.green.width}m wide</div>`);
+    `<div class="green-caption">FRONT · ${dist(hole.green.depth)}${UNITS} deep × ${dist(hole.green.width)}${UNITS} wide</div>`);
   $("greenSvgWrap").querySelectorAll(".quad-path").forEach((el) => {
     el.addEventListener("click", () => { st.quadrant = el.dataset.q; touch(); renderGreen(); });
   });
 
-  $("pinInfo").textContent = `${hole.pin.front}m on · ${hole.pin.side === "C" ? "centre" : hole.pin.side}`;
+  $("pinInfo").textContent = `${dist(hole.pin.front)}${UNITS} on · ${hole.pin.side === "C" ? "centre" : hole.pin.side}`;
   $("quadLabels").innerHTML = `PIN&nbsp;SECTOR&nbsp;→&nbsp;<b>${(QUADS[st.quadrant] || st.quadrant).toUpperCase()}</b>`;
   $("puttVal").textContent = st.putts;
   $("penVal").textContent = st.penalties;
-  $("firstPutt").value = st.firstPuttDist ?? "";
+  $("firstPutt").value = mToFt(st.firstPuttDist);
+  renderShortGame();
+}
+
+/* GIR for a hole (mirrors computeStats logic) */
+function isGir(n) {
+  const st = round.holes[n], h = COURSE.holes[n - 1];
+  let onIdx = -1;
+  st.waypoints.forEach((w, i) => { if (onIdx < 0 && i > 0 && detectLie(w) === "green") onIdx = i; });
+  return onIdx > 0 ? onIdx <= h.par - 2 : st.shots.length <= h.par - 2;
+}
+/* Short-game capture — shown when a green is missed or it isn't a 1-putt */
+function renderShortGame() {
+  const st = S();
+  const show = !isGir(curHole) || st.putts > 1;
+  $("shortGameBlock").style.display = show ? "" : "none";
+  document.querySelectorAll(".unit-lbl").forEach((el) => (el.textContent = UNITS));
+  if (!show) return;
+  $("chipLen").value = st.chipLen != null ? dist(st.chipLen) : "";
+  $("chipPutt").value = mToFt(st.firstPuttDist);
+  const lies = Object.keys(LIES).filter((k) => k !== "tee");
+  segBtns($("segChipLie"), lies.map((k) => LIES[k].label), st.chipLie ? LIES[st.chipLie].label : "", (label) => {
+    st.chipLie = Object.keys(LIES).find((k) => LIES[k].label === label); touch(); renderShortGame();
+  }, "Penalty");
+  segBtns($("segChipQual"), QUALITY, st.chipQuality || "OK", (v) => { st.chipQuality = v; touch(); renderShortGame(); }, ["Bad", "Ugly"]);
 }
 
 function renderPanel() { renderShotList(); renderEditor(); renderGreen(); renderRail(); }
@@ -698,7 +788,7 @@ function renderReport() {
     [s.gir + "<small>%</small>", "Greens in Reg"],
     [s.scramble + "<small>%</small>", "Scrambling"],
     [s.pens, "Penalties"],
-    [s.longest + "<small>m</small> <small style='font-size:11px'>avg " + s.avgDrive + "m</small>", "Longest Drive"],
+    [dist(s.longest) + "<small>" + UNITS + "</small> <small style='font-size:11px'>avg " + dist(s.avgDrive) + UNITS + "</small>", "Longest Drive"],
   ].map(([v, k]) => `<div class="stat-card"><div class="v">${v}</div><div class="k">${k}</div></div>`).join("");
 
   const row = (label, cells, cls = "") =>
@@ -711,20 +801,22 @@ function renderReport() {
     const sumPlayed = (f) => (played.length ? played.reduce((a, p) => a + f(p), 0) : "–");
     return `<table class="scoretable">${th}
       ${row("Par", seg.map((p) => p.h.par).concat(sum((p) => p.h.par)))}
-      ${row("Metres", seg.map((p) => p.h.metres).concat(sum((p) => p.h.metres)))}
+      ${row(UNITS === "yd" ? "Yards" : "Metres", seg.map((p) => dist(p.h.metres)).concat(dist(sum((p) => p.h.metres))))}
       ${row("SI", seg.map((p) => p.h.si).concat(""))}
+      ${row("Club", seg.map((p) => (p.touched && p.st.shots[0] ? p.st.shots[0].club : "–")).concat(""))}
       ${row("Score", seg.map((p) => p.touched ? `<span class="score-chip ${scoreClass(p.score, p.h.par)}">${p.score}</span>` : "–").concat(`<b>${sumPlayed((p) => p.score)}</b>`), "tot")}
       ${row("Putts", seg.map((p) => (p.touched ? p.st.putts : "–")).concat(sumPlayed((p) => p.st.putts)))}
       ${row("Pin", seg.map((p) => p.st.quadrant).concat(""))}
     </table>`;
   };
 
-  const clubs = {}, shapes = {}, lies = {};
+  const clubs = {}, shapes = {}, lies = {}, quals = {};
   let shotCount = 0;
   s.per.filter((p) => p.touched).forEach((p) => p.st.shots.forEach((sh) => {
     clubs[sh.club] = (clubs[sh.club] || 0) + 1;
     shapes[sh.shape] = (shapes[sh.shape] || 0) + 1;
     lies[LIES[sh.lie].label] = (lies[LIES[sh.lie].label] || 0) + 1;
+    quals[sh.quality || "OK"] = (quals[sh.quality || "OK"] || 0) + 1;
     shotCount++;
   }));
 
@@ -732,7 +824,10 @@ function renderReport() {
     <div class="report-grid">${cards}</div>
     ${half(0)}<br/>${half(9)}
     <div class="report-cols">
-      <div><h3>Club Usage</h3>${barChart(clubs, Math.max(...Object.values(clubs)))}</div>
+      <div>
+        <h3>Club Usage</h3>${barChart(clubs, Math.max(1, ...Object.values(clubs)))}
+        <h3 style="margin-top:14px">Lie Quality</h3>${barChart(quals, shotCount)}
+      </div>
       <div>
         <h3>Shot Shape</h3>${barChart(shapes, shotCount)}
         <h3 style="margin-top:14px">Lies Played From</h3>${barChart(lies, shotCount)}
@@ -825,18 +920,85 @@ $("fileCard").addEventListener("change", (e) => ingestFiles("card", [...e.target
     if (e.target.classList.contains("thumb-del")) { await idb.del(+tile.dataset.id); await refreshImages(); renderImport(); }
     else openLightbox(tile.querySelector("img").src);
   }));
-$("btnRunOcr").onclick = () => {
+/* map a Gemini /ocr result onto the editable card + plot onto loaded geometry */
+function applyOcrResult(data) {
+  round.ocrCourse = data.course || null;
+  round.ocrDate = data.date || null;
+  round.pins = {};
+  round.card = {};
+  (data.holes || []).forEach((h) => {
+    const n = h.num;
+    if (!n || n < 1 || n > 18) return;
+    const par = h.par ?? COURSE.holes[n - 1].par;
+    round.card[n] = par === 3
+      ? { score: h.score ?? null, teeClub: h.teeClub || null, notedDist: h.apprFrom ?? h.whiteYards ?? null,
+          gir: h.gir ?? null, firstPuttFt: h.firstPuttFt ?? null, putts: h.putts ?? 2, lastPuttFt: h.lastPuttFt ?? null, review: [] }
+      : { score: h.score ?? null, fir: h.fir ?? null, missSide: h.missSide || null, teeClub: h.teeClub || null,
+          teeDist: h.teeDist ?? null, apprFrom: h.apprFrom ?? null, apprClub: h.apprClub || null, gir: h.gir ?? null,
+          firstPuttFt: h.firstPuttFt ?? null, putts: h.putts ?? 2, lastPuttFt: h.lastPuttFt ?? null, review: [] };
+    if (h.pinFront != null || h.pinSideLetter) round.pins[n] = { front: h.pinFront ?? null, side: h.pinSide ?? null, letter: h.pinSideLetter || null };
+  });
+  Object.keys(round.card).forEach((n) => { round.holes[n] = plotFromCard(COURSE.holes[n - 1], round.card[n]); });
+  round.ocrApplied = true;
+  if (data.date) round.date = data.date;
+  save(); renderRail(); renderHud(); drawHole(false); renderPanel();
+}
+$("btnRunOcr").onclick = async () => {
   const btn = $("btnRunOcr"), st = $("ocrStatus");
   btn.disabled = true;
-  st.textContent = "Reading handwriting…";
-  setTimeout(() => {
-    applyOcrDraft();
-    const flagged = Object.values(round.card).reduce((a, c) => a + (c.review?.length || 0), 0);
-    const holesRead = Object.keys(round.card).length;
-    st.textContent = `Done — ${holesRead} holes drafted, ${flagged} fields flagged for review.`;
+  const images = [
+    ...IMAGES.filter((r) => r.bucket === "card").map((r) => r.dataUrl),
+    ...IMAGES.filter((r) => r.bucket === "pins").map((r) => r.dataUrl),
+  ];
+  st.textContent = "Reading your card…";
+  try {
+    const res = await fetch(apiBase() + "/ocr", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ images }),
+    });
+    if (!res.ok || !res.body) { const j = await res.json().catch(() => ({})); throw new Error(j.error || "HTTP " + res.status); }
+    // consume the NDJSON stream — holes populate live
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = "", course = null, date = null, data = null;
+    const holes = {};
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (!line) continue;
+        let ev; try { ev = JSON.parse(line); } catch { continue; }
+        if (ev.type === "meta") { course = ev.course; date = ev.date; st.textContent = `Reading ${course || "your card"}…`; }
+        else if (ev.type === "hole") { holes[ev.hole.num] = ev.hole; st.textContent = `Reading ${course || "your card"}… ${Object.keys(holes).length}/18 holes`; }
+        else if (ev.type === "status" && ev.stage === "verifying") { st.textContent = "Double-checking a few holes with the detailed model…"; }
+        else if (ev.type === "done") { data = { course: ev.course || course, date: ev.date || date, holes: ev.holes || Object.values(holes) }; }
+        else if (ev.type === "error") { throw new Error(ev.error); }
+      }
+    }
+    if (!data || !data.holes || !data.holes.length) throw new Error("no holes read");
+    // course resolution: load the matching course, build it from OSM, or fall back to data-only
+    const matchId = matchCourseId(data.course);
+    if (matchId && matchId !== COURSE_ID) { st.textContent = `Read ${data.course} — loading its map…`; return switchCourse(matchId, data); }
+    if (!matchId && data.course) {
+      st.textContent = `Read ${data.course} — building its map from OpenStreetMap…`;
+      try { const c = await buildCourseFromOSM(data.course, data); return switchCourse(registerCourse(c), data); }
+      catch (e) { st.textContent = `Read ${data.course} — map unavailable (${e.message}); showing scorecard data on the current map.`; }
+    }
+    applyOcrResult(data);
+    st.textContent = `Read ${data.holes.length} holes from ${data.course || "your card"}. Review on the Extended Card.`;
     btn.disabled = false;
     setTimeout(() => { $("importModal").classList.add("hidden"); renderCard(); $("cardModal").classList.remove("hidden"); }, 900);
-  }, 1400);
+  } catch (e) {
+    const conn = /fetch|connection|refused|networkerror|load failed|http 5/i.test(e.message || "");
+    st.style.color = "var(--red)";
+    st.textContent = conn
+      ? `Can't reach the OCR service at ${apiBase()}. Start it in a terminal — node tools/api.mjs — then tap Run OCR again.`
+      : `Couldn't read the card (${e.message}). Check the photos are clear and try again.`;
+    btn.disabled = false;   // stay on the Import screen so you can retry
+    setTimeout(() => (st.style.color = ""), 8000);
+  }
 };
 $("btnImport").onclick = () => { renderImport(); $("importModal").classList.remove("hidden"); };
 $("btnCloseImport").onclick = () => $("importModal").classList.add("hidden");
@@ -897,11 +1059,19 @@ function cardRow(h) {
 }
 function renderCardSources() {
   const imgs = [...IMAGES.filter((r) => r.bucket === "card"), ...IMAGES.filter((r) => r.bucket === "pins")];
-  $("cardSources").innerHTML = imgs.length
+  let banner = "";
+  if (round.ocrCourse) {
+    const key = COURSE.course.name.toLowerCase().split(/\s+/).find((w) => w.length > 4) || "";
+    const sameCourse = key && round.ocrCourse.toLowerCase().includes(key);
+    banner = sameCourse
+      ? `<div class="card-banner ok">Read from <b>${round.ocrCourse}</b>${round.ocrDate ? " · " + round.ocrDate : ""} — matches the loaded course map.</div>`
+      : `<div class="card-banner warn">Read from <b>${round.ocrCourse}</b>${round.ocrDate ? " · " + round.ocrDate : ""}. Map geometry for this course isn't loaded yet, so the satellite map shows the demo course — the scorecard data below is from your card and is correct.</div>`;
+  }
+  $("cardSources").innerHTML = banner + (imgs.length
     ? `<div class="src-strip">${imgs.map((r) =>
         `<img class="src-thumb" src="${r.dataUrl}" alt="${r.bucket === "pins" ? "pin sheet" : "scorecard"} photo" title="${r.bucket === "pins" ? "Pin sheet" : "Scorecard"} — click to zoom"/>`).join("")}
        <span class="src-hint">click a photo to zoom while you check the grid</span></div>`
-    : `<div class="src-strip empty">No source photos attached — use 📷 Import to add the card and pin sheet.</div>`;
+    : `<div class="src-strip empty">No source photos attached — use 📷 Import to add the card and pin sheet.</div>`);
   $("cardSources").querySelectorAll("img").forEach((im) => (im.onclick = () => openLightbox(im.src)));
 }
 function renderCard() {
@@ -981,7 +1151,15 @@ $("penStepper").onclick = (e) => {
   const d = +e.target.dataset?.d; if (!d) return;
   S().penalties = Math.max(0, S().penalties + d); touch(); renderPanel();
 };
-$("firstPutt").onchange = (e) => { S().firstPuttDist = e.target.value === "" ? null : +e.target.value; touch(); };
+$("firstPutt").onchange = (e) => { S().firstPuttDist = ftToM(e.target.value); touch(); renderShortGame(); };
+$("chipPutt").onchange = (e) => { S().firstPuttDist = ftToM(e.target.value); touch(); $("firstPutt").value = mToFt(S().firstPuttDist); };
+$("chipLen").onchange = (e) => { S().chipLen = toM(e.target.value); touch(); };
+function applyUnits() {
+  $("btnUnits").textContent = UNITS;
+  document.querySelectorAll(".unit-lbl").forEach((el) => (el.textContent = UNITS));
+  renderHud(); renderPanel(); drawHole(false);
+}
+$("btnUnits").onclick = () => { setUnits(UNITS === "yd" ? "m" : "yd"); applyUnits(); };
 $("btnSummary").onclick = () => { renderReport(); $("summaryModal").classList.remove("hidden"); };
 $("btnCloseSummary").onclick = () => $("summaryModal").classList.add("hidden");
 $("btnPrint").onclick = () => window.print();
@@ -1006,50 +1184,213 @@ document.addEventListener("keydown", (e) => {
   if (e.target.tagName === "INPUT") return;
   if (e.key === "ArrowRight" || e.key === "n") gotoNext();
   if (e.key === "ArrowLeft" || e.key === "p") gotoPrev();
-  if (e.key === "Escape") ["summaryModal", "cardModal", "importModal", "lightbox", "courseModal"].forEach((id) => $(id).classList.add("hidden"));
+  if (e.key === "Escape") ["summaryModal", "cardModal", "importModal", "lightbox", "courseModal", "chatModal"].forEach((id) => $(id).classList.add("hidden"));
 });
 setTimeout(() => { const h = $("mapHint"); h.style.transition = "opacity 1s"; h.style.opacity = "0"; }, 8000);
+
+/* ═══════════════ COURSE CADDIE CHAT (Gemini via the TDP API layer) ═══════════════ */
+const CHAT = {
+  base: localStorage.getItem("tdp.chat.base") || "http://localhost:4174",
+  model: localStorage.getItem("tdp.chat.model") || "gemini",
+  msgs: [],
+  busy: false,
+};
+function courseContext() {
+  const h = H(), st = S(), w = round.weather;
+  const played = COURSE.holes.filter((x) => round.holes[x.num].touched);
+  const thru = played.length;
+  const toPar = played.reduce((a, x) => a + (holeScore(x.num) - x.par), 0);
+  const card = played.map((x) => `H${x.num}(p${x.par}):${holeScore(x.num)}`).join(" ");
+  let wind = "";
+  if (w) {
+    const rel = (w.wind_direction_10m - bearingDeg(h.tee, h.green.centre) + 360) % 360;
+    const tag = rel >= 315 || rel < 45 ? "into" : rel >= 135 && rel < 225 ? "helping" : rel < 135 ? "cross R→L" : "cross L→R";
+    wind = `${Math.round(w.wind_speed_10m)} km/h ${tag} (gust ${Math.round(w.wind_gusts_10m)})`;
+  }
+  return [
+    `You are the TDP Course Caddie for ${round.ocrCourse || COURSE.course.name} (${round.player.tees} tees, par ${COURSE.course.par}).`,
+    `Give short, practical, confident caddie advice grounded in THIS course and round. 1-4 sentences. No preamble.`,
+    `Today: ${round.date}. Weather: ${w ? Math.round(w.temperature_2m) + "°C, wind " + wind : "n/a"}.`,
+    `Current hole: ${h.num}, par ${h.par}, ${h.metres}m, stroke index ${h.si}. Pin: ${h.pin.front}m on, ${h.pin.side === "C" ? "centre" : h.pin.side} (${QUADS[st.quadrant] || st.quadrant}).`,
+    `This hole so far: ${st.shots.length} shots + ${st.putts} putts = ${holeScore(h.num)}.`,
+    thru ? `Round so far: thru ${thru}, ${toPar >= 0 ? "+" + toPar : toPar} to par. Card: ${card}.` : `Round not started yet.`,
+    `Metric distances. If unsure, say so briefly rather than inventing yardages.`,
+  ].join("\n");
+}
+function chatBubble(role, text, cls) {
+  const div = document.createElement("div");
+  div.className = "chat-msg " + role + (cls ? " " + cls : "");
+  div.textContent = text;
+  $("chatLog").appendChild(div);
+  $("chatLog").scrollTop = $("chatLog").scrollHeight;
+  return div;
+}
+function openChat() {
+  $("chatBase").value = apiBase();
+  $("chatModel").value = CHAT.model;
+  $("chatModal").classList.remove("hidden");
+  if (!CHAT.msgs.length && !$("chatLog").children.length) {
+    chatBubble("bot", `On the bag for hole ${curHole}. Ask me about club choice, the pin, the wind, or how to play it.`);
+  }
+  setTimeout(() => $("chatInput").focus(), 50);
+}
+async function sendChat() {
+  const text = $("chatInput").value.trim();
+  if (!text || CHAT.busy) return;
+  $("chatInput").value = "";
+  chatBubble("me", text);
+  CHAT.msgs.push({ role: "user", content: text });
+  CHAT.busy = true; $("chatSend").disabled = true;
+  const thinking = chatBubble("bot", "…", "thinking");
+  try {
+    const res = await fetch(apiBase() + "/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ system: courseContext(), messages: CHAT.msgs.slice(-10) }),
+    });
+    const j = await res.json();
+    if (!res.ok || j.error) throw new Error(j.error || "HTTP " + res.status);
+    const reply = (j.reply || "").trim() || "(no reply)";
+    thinking.remove();
+    chatBubble("bot", reply);
+    CHAT.msgs.push({ role: "assistant", content: reply });
+  } catch (e) {
+    thinking.remove();
+    chatBubble("bot",
+      `Can't reach the TDP caddie service at ${apiBase()} (${e.message}). Start it with  node tools/api.mjs  (it holds the Gemini key).`,
+      "err");
+  } finally {
+    CHAT.busy = false; $("chatSend").disabled = false; $("chatInput").focus();
+  }
+}
+$("btnChat").onclick = openChat;
+$("btnCloseChat").onclick = () => $("chatModal").classList.add("hidden");
+$("btnChatCfg").onclick = () => $("chatCfg").classList.toggle("hidden");
+$("chatSend").onclick = sendChat;
+$("chatInput").addEventListener("keydown", (e) => { if (e.key === "Enter") sendChat(); });
+$("chatBase").addEventListener("change", (e) => { const v = e.target.value.trim(); if (v) localStorage.setItem("tdp.api.base", v); else localStorage.removeItem("tdp.api.base"); });
+$("chatModel").addEventListener("change", (e) => { CHAT.model = e.target.value.trim(); localStorage.setItem("tdp.chat.model", CHAT.model); });
 
 /* ═══════════════ COURSE SELECTION ═══════════════ */
 /* Valderrama is fully mapped; the others are placeholders for the course library.
    Adding real geometry for a new course = run the Overpass pipeline (tools/build-course-data.mjs)
    for that course, or fetch it from the TDP course API — then register it here with its data. */
-const COURSES = [
-  { id: "valderrama", name: "Real Club Valderrama", loc: "Sotogrande, Spain", meta: "White · par 71 · 5,921m", live: true },
-  { id: "guadalmina", name: "Guadalmina Golf (South)", loc: "Marbella, Spain", meta: "", live: false },
-  { id: "sotogrande", name: "Real Club de Golf Sotogrande", loc: "Sotogrande, Spain", meta: "", live: false },
-  { id: "costaterra", name: "Costa Terra Golf", loc: "Comporta, Portugal", meta: "", live: false },
-];
+/* every playable course = built-ins + on-demand courses cached in the registry */
+function allCourses() {
+  const list = BUILTINS.map((c) => ({ id: slug(c.course.name), name: c.course.name, loc: c.course.location || "", holes: c.holes.length }));
+  courseIndex().forEach((e) => { if (!list.find((c) => c.id === e.id)) list.push({ id: e.id, name: e.name, loc: e.location, built: true }); });
+  return list;
+}
 function renderCourseList(q) {
-  q = (q || "").toLowerCase();
+  q = (q || "").toLowerCase().trim();
   const list = $("courseList");
-  list.innerHTML = "";
-  const hits = COURSES.filter((c) => c.name.toLowerCase().includes(q) || c.loc.toLowerCase().includes(q));
-  hits.forEach((c) => {
-    const div = document.createElement("div");
-    div.className = "course-item" + (c.live ? "" : " soon");
-    const tag = c.live ? `<span class="ci-live">DEMO · LIVE</span>` : `<span class="ci-soon">COMING SOON</span>`;
-    div.innerHTML =
-      `<div class="ci-main"><div class="ci-name">${c.name} ${tag}</div>
-         <div class="ci-loc">${c.loc}${c.meta ? " · " + c.meta : ""}</div></div>
-       <div class="ci-go">${c.live ? "›" : ""}</div>`;
-    if (c.live) div.onclick = () => selectCourse(c.id);
-    list.appendChild(div);
-  });
-  if (!hits.length) list.innerHTML = `<div class="course-empty">No match for “${q}”. In production this searches TDP's 25,000-course library and pulls the geometry on demand.</div>`;
+  const hits = allCourses().filter((c) => c.name.toLowerCase().includes(q) || (c.loc || "").toLowerCase().includes(q));
+  list.innerHTML = hits.map((c) => `
+    <div class="course-item" data-id="${c.id}">
+      <div class="ci-main"><div class="ci-name">${c.name} ${c.id === COURSE_ID ? '<span class="ci-live">LOADED</span>' : '<span class="ci-live">PLAYABLE</span>'}</div>
+        <div class="ci-loc">${c.loc || ""}${c.holes ? " · " + c.holes + " holes mapped" : ""}</div></div>
+      <div class="ci-go">${c.id === COURSE_ID ? "✓" : "›"}</div>
+    </div>`).join("");
+  if (q && !hits.find((c) => c.name.toLowerCase() === q)) {
+    list.insertAdjacentHTML("beforeend",
+      `<div class="course-item build-item" id="buildItem"><div class="ci-main"><div class="ci-name">Build “${q}” from OpenStreetMap</div>
+        <div class="ci-loc">Fetches the course map on demand · worldwide</div></div><div class="ci-go">⤓</div></div>`);
+    $("buildItem").onclick = () => buildAndLoad(q);
+  }
+  list.querySelectorAll(".course-item[data-id]").forEach((el) => (el.onclick = () => selectCourse(el.dataset.id)));
 }
 function openCourseModal() { renderCourseList(""); $("courseSearch").value = ""; $("courseModal").classList.remove("hidden"); }
 function selectCourse(id) {
   $("courseModal").classList.add("hidden");
-  if (id === "valderrama") { gotoHole(1); fitCourse(); }
+  if (id === COURSE_ID) { gotoHole(1); fitCourse(); return; }
+  switchCourse(id);
+}
+async function buildAndLoad(name) {
+  const list = $("courseList");
+  list.innerHTML = `<div class="course-empty">Finding “${name}” and pulling its map from OpenStreetMap…</div>`;
+  try {
+    const c = await buildCourseFromOSM(name);
+    const id = registerCourse(c);
+    switchCourse(id);
+  } catch (e) {
+    list.innerHTML = `<div class="course-empty">Couldn't build “${name}” automatically (${e.message}). It may not be mapped in OpenStreetMap, or the name needs to be more specific (e.g. include the town).</div>`;
+  }
 }
 $("btnCourses").onclick = openCourseModal;
 $("btnCloseCourse").onclick = () => $("courseModal").classList.add("hidden");
 $("courseSearch").oninput = (e) => renderCourseList(e.target.value);
 
+/* ═══════════════ BUILD A COURSE FROM OSM (client-side) ═══════════════ */
+async function geocode(name) {
+  const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name + " golf")}&format=json&limit=5`, { headers: { "Accept-Language": "en" } });
+  const arr = await r.json();
+  const g = arr.find((x) => /golf|leisure/i.test((x.type || "") + (x.class || ""))) || arr[0];
+  if (!g) throw new Error("course not found");
+  return { lat: +g.lat, lon: +g.lon };
+}
+async function overpassGolf(lat, lon) {
+  const d = 0.012;
+  const bbox = `${lat - d},${lon - d},${lat + d},${lon + d}`;
+  const q = `[out:json][timeout:60];(way["golf"](${bbox});way["leisure"="golf_course"](${bbox}););out geom;`;
+  const mirrors = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+  for (const url of mirrors) {
+    try {
+      const r = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(q) });
+      const t = await r.text();
+      if (t.trim().startsWith("{")) return JSON.parse(t);
+    } catch {}
+  }
+  throw new Error("map service busy — try again");
+}
+function buildCourseData(name, els, card) {
+  const R = 6371000, toR = (x) => (x * Math.PI) / 180;
+  const hav = (a, b) => { const dLat = toR(b.lat - a.lat), dLon = toR(b.lon - a.lon); const s = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLon / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(s)); };
+  const brg = (a, b) => { const y = Math.sin(toR(b.lon - a.lon)) * Math.cos(toR(b.lat)); const x = Math.cos(toR(a.lat)) * Math.sin(toR(b.lat)) - Math.sin(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.cos(toR(b.lon - a.lon)); return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360; };
+  const cen = (p) => ({ lat: p.reduce((s, q) => s + q.lat, 0) / p.length, lon: p.reduce((s, q) => s + q.lon, 0) / p.length });
+  const len = (g) => g.reduce((s, _, i) => (i ? s + hav(g[i - 1], g[i]) : 0), 0);
+  const r6 = (n) => Math.round(n * 1e6) / 1e6, ring = (g) => g.map((p) => [r6(p.lat), r6(p.lon)]);
+  const geo = els.filter((e) => e.geometry?.length);
+  const kind = (k) => geo.filter((e) => e.tags?.golf === k && e.geometry.length > 2);
+  const holesRaw = geo.filter((e) => e.tags?.golf === "hole" && e.tags?.ref).sort((a, b) => +a.tags.ref - +b.tags.ref).slice(0, 18);
+  if (holesRaw.length < 9) throw new Error(holesRaw.length + " holes mapped");
+  const greens = kind("green"), used = new Set();
+  const cardBy = {}; (card?.holes || []).forEach((h) => (cardBy[h.num] = h));
+  const holes = holesRaw.map((h, i) => {
+    const line = h.geometry, end = line[line.length - 1];
+    let best = null, bd = 1e9; for (const g of greens) { if (used.has(g.id)) continue; const dd = hav(cen(g.geometry), end); if (dd < bd) { bd = dd; best = g; } }
+    used.add(best.id);
+    const gC = cen(best.geometry), b = brg(line[line.length - 2], gC), rad = toR(b);
+    const kLat = 111132, kLon = 111320 * Math.cos(toR(gC.lat));
+    const ux = Math.sin(rad), uy = Math.cos(rad), vx = Math.cos(rad), vy = -Math.sin(rad);
+    let mA = 1e9, xA = -1e9, mB = 1e9, xB = -1e9;
+    for (const p of best.geometry) { const X = (p.lon - gC.lon) * kLon, Y = (p.lat - gC.lat) * kLat; const A = X * ux + Y * uy, B = X * vx + Y * vy; if (A < mA) mA = A; if (A > xA) xA = A; if (B < mB) mB = B; if (B > xB) xB = B; }
+    const c = cardBy[i + 1] || {};
+    const side = !c.pinSideLetter || c.pinSideLetter === "C" ? "C" : `${c.pinSide ?? 4}${c.pinSideLetter}`;
+    return { num: i + 1, par: c.par ?? (+h.tags.par || 4), si: c.si ?? i + 1, metres: Math.round(len(line)),
+      pin: { front: c.pinFront ?? 15, side }, line: ring(line), tee: [r6(line[0].lat), r6(line[0].lon)],
+      green: { poly: ring(best.geometry), centre: [r6(gC.lat), r6(gC.lon)], approach: Math.round(b * 10) / 10, depth: Math.round(xA - mA), width: Math.round(xB - mB), frontOffset: Math.round(-mA) } };
+  });
+  const ov = (k) => kind(k).map((e) => ring(e.geometry));
+  return { course: { name, location: card?.course || name, lat: r6(cen(holes.map((h) => ({ lat: h.tee[0], lon: h.tee[1] }))).lat), lon: r6(cen(holes.map((h) => ({ lat: h.tee[0], lon: h.tee[1] }))).lon), teeSet: "White", units: "metres", par: holes.reduce((s, h) => s + h.par, 0), totalMetres: holes.reduce((s, h) => s + h.metres, 0), slope: 130, rating: 72 },
+    holes, overlays: { fairway: ov("fairway"), green: ov("green"), bunker: ov("bunker"), water: ov("water_hazard"), rough: ov("rough"), tee: ov("tee") } };
+}
+async function buildCourseFromOSM(name, card) {
+  const { lat, lon } = await geocode(name);
+  const data = await overpassGolf(lat, lon);
+  return buildCourseData(name, data.elements, card);
+}
+
 /* ═══════════════ BOOT ═══════════════ */
 load();
+$("btnUnits").textContent = UNITS;
+$("metaPlayer").textContent = round.player.name;
+$("metaCourse").textContent = `${COURSE.course.name} · ${COURSE.course.teeSet || "White"} tees`;
 gotoHole(1);
 loadWeather();
 idb.open().then(refreshImages).catch((e) => console.warn("image store unavailable", e));
+// if we just switched course carrying an imported card, apply it now
+try {
+  const pend = localStorage.getItem("tdp.pending.card");
+  if (pend) { localStorage.removeItem("tdp.pending.card"); applyOcrResult(JSON.parse(pend)); renderCard(); $("cardModal").classList.remove("hidden"); }
+} catch (e) { console.warn("pending card apply failed", e); }
 })();
