@@ -1322,67 +1322,18 @@ $("btnCourses").onclick = openCourseModal;
 $("btnCloseCourse").onclick = () => $("courseModal").classList.add("hidden");
 $("courseSearch").oninput = (e) => renderCourseList(e.target.value);
 
-/* ═══════════════ BUILD A COURSE FROM OSM (client-side) ═══════════════ */
-/* geocode via the Gemini model (knows golf courses worldwide) → coordinates */
-async function geocode(name) {
-  const r = await fetch(apiBase() + "/geocode", {
-    method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
-  const g = await r.json();
-  if (!r.ok || g.error || typeof g.lat !== "number") throw new Error(g.error || "couldn't locate that course");
-  return { lat: g.lat, lon: g.lon, name: g.name || name, country: g.country, confidence: g.confidence };
-}
-async function overpassGolf(lat, lon) {
-  const d = 0.012;
-  const bbox = `${lat - d},${lon - d},${lat + d},${lon + d}`;
-  const q = `[out:json][timeout:60];(way["golf"](${bbox});way["leisure"="golf_course"](${bbox}););out geom;`;
-  const mirrors = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
-  for (const url of mirrors) {
-    try {
-      const r = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(q) });
-      const t = await r.text();
-      if (t.trim().startsWith("{")) return JSON.parse(t);
-    } catch {}
-  }
-  throw new Error("map service busy — try again");
-}
-function buildCourseData(name, els, card) {
-  const R = 6371000, toR = (x) => (x * Math.PI) / 180;
-  const hav = (a, b) => { const dLat = toR(b.lat - a.lat), dLon = toR(b.lon - a.lon); const s = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLon / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(s)); };
-  const brg = (a, b) => { const y = Math.sin(toR(b.lon - a.lon)) * Math.cos(toR(b.lat)); const x = Math.cos(toR(a.lat)) * Math.sin(toR(b.lat)) - Math.sin(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.cos(toR(b.lon - a.lon)); return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360; };
-  const cen = (p) => ({ lat: p.reduce((s, q) => s + q.lat, 0) / p.length, lon: p.reduce((s, q) => s + q.lon, 0) / p.length });
-  const len = (g) => g.reduce((s, _, i) => (i ? s + hav(g[i - 1], g[i]) : 0), 0);
-  const r6 = (n) => Math.round(n * 1e6) / 1e6, ring = (g) => g.map((p) => [r6(p.lat), r6(p.lon)]);
-  const geo = els.filter((e) => e.geometry?.length);
-  const kind = (k) => geo.filter((e) => e.tags?.golf === k && e.geometry.length > 2);
-  const holesRaw = geo.filter((e) => e.tags?.golf === "hole" && e.tags?.ref).sort((a, b) => +a.tags.ref - +b.tags.ref).slice(0, 18);
-  if (holesRaw.length < 9) throw new Error("only " + holesRaw.length + " holes mapped in OpenStreetMap yet");
-  const greens = kind("green"), used = new Set();
-  const cardBy = {}; (card?.holes || []).forEach((h) => (cardBy[h.num] = h));
-  const holes = holesRaw.map((h, i) => {
-    const line = h.geometry, end = line[line.length - 1];
-    let best = null, bd = 1e9; for (const g of greens) { if (used.has(g.id)) continue; const dd = hav(cen(g.geometry), end); if (dd < bd) { bd = dd; best = g; } }
-    used.add(best.id);
-    const gC = cen(best.geometry), b = brg(line[line.length - 2], gC), rad = toR(b);
-    const kLat = 111132, kLon = 111320 * Math.cos(toR(gC.lat));
-    const ux = Math.sin(rad), uy = Math.cos(rad), vx = Math.cos(rad), vy = -Math.sin(rad);
-    let mA = 1e9, xA = -1e9, mB = 1e9, xB = -1e9;
-    for (const p of best.geometry) { const X = (p.lon - gC.lon) * kLon, Y = (p.lat - gC.lat) * kLat; const A = X * ux + Y * uy, B = X * vx + Y * vy; if (A < mA) mA = A; if (A > xA) xA = A; if (B < mB) mB = B; if (B > xB) xB = B; }
-    const c = cardBy[i + 1] || {};
-    const side = !c.pinSideLetter || c.pinSideLetter === "C" ? "C" : `${c.pinSide ?? 4}${c.pinSideLetter}`;
-    return { num: i + 1, par: c.par ?? (+h.tags.par || 4), si: c.si ?? i + 1, metres: Math.round(len(line)),
-      pin: { front: c.pinFront ?? 15, side }, line: ring(line), tee: [r6(line[0].lat), r6(line[0].lon)],
-      green: { poly: ring(best.geometry), centre: [r6(gC.lat), r6(gC.lon)], approach: Math.round(b * 10) / 10, depth: Math.round(xA - mA), width: Math.round(xB - mB), frontOffset: Math.round(-mA) } };
-  });
-  const ov = (k) => kind(k).map((e) => ring(e.geometry));
-  return { course: { name, location: card?.course || name, lat: r6(cen(holes.map((h) => ({ lat: h.tee[0], lon: h.tee[1] }))).lat), lon: r6(cen(holes.map((h) => ({ lat: h.tee[0], lon: h.tee[1] }))).lon), teeSet: "White", units: "metres", par: holes.reduce((s, h) => s + h.par, 0), totalMetres: holes.reduce((s, h) => s + h.metres, 0), slope: 130, rating: 72 },
-    holes, overlays: { fairway: ov("fairway"), green: ov("green"), bunker: ov("bunker"), water: ov("water_hazard"), rough: ov("rough"), tee: ov("tee") } };
-}
+/* ═══════════════ BUILD A COURSE FROM OSM (server-side) ═══════════════ */
+/* The whole build runs in the /course Edge Function: Gemini geocode → bounded
+   Overpass (retries across mirrors) → assemble. Keeps flaky Overpass off the
+   browser. Returns the full window.TDP_COURSE-shaped object. */
 async function buildCourseFromOSM(name, card) {
-  const g = await geocode(name);
-  const data = await overpassGolf(g.lat, g.lon);
-  return buildCourseData(g.name || name, data.elements, card);
+  const r = await fetch(apiBase() + "/course", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name, card: card || null }),
+  });
+  const d = await r.json();
+  if (!r.ok || d.error || !d.holes || !d.holes.length) throw new Error(d.error || "couldn't build that course");
+  return d;
 }
 
 /* ═══════════════ BOOT ═══════════════ */
