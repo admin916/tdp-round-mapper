@@ -1323,12 +1323,15 @@ $("btnCloseCourse").onclick = () => $("courseModal").classList.add("hidden");
 $("courseSearch").oninput = (e) => renderCourseList(e.target.value);
 
 /* ═══════════════ BUILD A COURSE FROM OSM (client-side) ═══════════════ */
+/* geocode via the Gemini model (knows golf courses worldwide) → coordinates */
 async function geocode(name) {
-  const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name + " golf")}&format=json&limit=5`, { headers: { "Accept-Language": "en" } });
-  const arr = await r.json();
-  const g = arr.find((x) => /golf|leisure/i.test((x.type || "") + (x.class || ""))) || arr[0];
-  if (!g) throw new Error("course not found");
-  return { lat: +g.lat, lon: +g.lon };
+  const r = await fetch(apiBase() + "/geocode", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  const g = await r.json();
+  if (!r.ok || g.error || typeof g.lat !== "number") throw new Error(g.error || "couldn't locate that course");
+  return { lat: g.lat, lon: g.lon, name: g.name || name, country: g.country, confidence: g.confidence };
 }
 async function overpassGolf(lat, lon) {
   const d = 0.012;
@@ -1354,7 +1357,7 @@ function buildCourseData(name, els, card) {
   const geo = els.filter((e) => e.geometry?.length);
   const kind = (k) => geo.filter((e) => e.tags?.golf === k && e.geometry.length > 2);
   const holesRaw = geo.filter((e) => e.tags?.golf === "hole" && e.tags?.ref).sort((a, b) => +a.tags.ref - +b.tags.ref).slice(0, 18);
-  if (holesRaw.length < 9) throw new Error(holesRaw.length + " holes mapped");
+  if (holesRaw.length < 9) throw new Error("only " + holesRaw.length + " holes mapped in OpenStreetMap yet");
   const greens = kind("green"), used = new Set();
   const cardBy = {}; (card?.holes || []).forEach((h) => (cardBy[h.num] = h));
   const holes = holesRaw.map((h, i) => {
@@ -1377,9 +1380,9 @@ function buildCourseData(name, els, card) {
     holes, overlays: { fairway: ov("fairway"), green: ov("green"), bunker: ov("bunker"), water: ov("water_hazard"), rough: ov("rough"), tee: ov("tee") } };
 }
 async function buildCourseFromOSM(name, card) {
-  const { lat, lon } = await geocode(name);
-  const data = await overpassGolf(lat, lon);
-  return buildCourseData(name, data.elements, card);
+  const g = await geocode(name);
+  const data = await overpassGolf(g.lat, g.lon);
+  return buildCourseData(g.name || name, data.elements, card);
 }
 
 /* ═══════════════ BOOT ═══════════════ */
