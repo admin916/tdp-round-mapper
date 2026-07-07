@@ -554,12 +554,15 @@ table.scoretable { width: 100%; border-collapse: collapse; font-size: 12px; marg
   .sheet-handle .sh-label { font-size: 11px; letter-spacing: 0.6px; color: var(--txt-2); font-weight: 650; }
   .sheet-handle .sh-label b { color: var(--accent); }
 
-  /* full-screen modals (Import · Extended Card · Report) with compact report */
-  .modal { padding: 0; }
+  /* full-screen modals (Import · Extended Card · Report) with compact report.
+     100dvh so the sheet ends at the visible viewport (above Safari's bottom bar);
+     generous bottom padding so the last row clears the browser chrome / home bar. */
+  .modal { padding: 0; height: 100dvh; }
   .modal-card, .modal-card.wide {
-    border-radius: 0; width: 100%; max-height: 100%; height: 100%;
-    padding: calc(14px + env(safe-area-inset-top)) 13px calc(18px + env(safe-area-inset-bottom));
+    border-radius: 0; width: 100%; height: 100dvh; max-height: 100dvh;
+    padding: calc(14px + env(safe-area-inset-top)) 13px calc(64px + env(safe-area-inset-bottom));
   }
+  #cardBody, #reportBody { padding-bottom: 24px; }
   .modal-head { margin-bottom: 10px; gap: 8px; }
   .modal-head h1 { font-size: 18px; }
   .modal-sub { font-size: 10px; margin-top: 3px; }
@@ -574,8 +577,8 @@ table.scoretable { width: 100%; border-collapse: collapse; font-size: 12px; marg
   .scoretable { font-size: 9.5px; margin-top: 2px; }
   .scoretable th, .scoretable td { padding: 3px 1px; }
   .score-chip { min-width: 16px; padding: 1px 3px; font-size: 9.5px; }
-  /* hide Yards/Metres (3), SI (4), Pin (8) on phone — keep Par, Club, Score, Putts */
-  .scoretable tr:nth-child(3), .scoretable tr:nth-child(4), .scoretable tr:nth-child(8) { display: none; }
+  /* hide Yards/Metres (3), SI (4), Pin (8) on phone — REPORT ONLY (not the Extended Card grid) */
+  #reportBody .scoretable tr:nth-child(3), #reportBody .scoretable tr:nth-child(4), #reportBody .scoretable tr:nth-child(8) { display: none; }
   #reportBody br { display: none; }
   #reportBody table + table { margin-top: 8px; }
   .report-cols { grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }
