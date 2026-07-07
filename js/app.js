@@ -1086,8 +1086,10 @@ function renderCard() {
       <tr><th>Hole</th><th>Score</th><th>Fairway</th><th>Tee club</th><th>Tee yd</th><th>GIR</th><th>From yd</th><th>Club</th><th>1st putt ft</th><th>Putts</th><th>Last ft</th><th></th></tr>
       ${COURSE.holes.map(cardRow).join("")}
     </table></div>
-    <div class="card-totals">OUT <b>${out ?? "–"}</b> · IN <b>${inn ?? "–"}</b> · TOTAL <b>${out != null || inn != null ? (out ?? 0) + (inn ?? 0) : "–"}</b>
-      <span class="dim">· red rows: score doesn't reconcile with shots + putts</span></div>`;
+    <div class="card-totals">
+      <span class="ct-scores">OUT <b>${out ?? "–"}</b> · IN <b>${inn ?? "–"}</b> · TOTAL <b>${out != null || inn != null ? (out ?? 0) + (inn ?? 0) : "–"}</b></span>
+      <span class="dim">Red rows: score doesn't reconcile with shots + putts.</span>
+    </div>`;
 }
 $("cardBody").addEventListener("change", (e) => {
   const t = e.target;

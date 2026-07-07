@@ -431,10 +431,11 @@ table.scoretable { width: 100%; border-collapse: collapse; font-size: 12px; marg
 .mini-seg button.on { background: var(--accent-soft); border-color: rgba(35, 198, 139, 0.55); color: var(--accent); }
 .card-totals {
   margin-top: 12px; font-size: 12px; letter-spacing: 1px; color: var(--txt-2);
-  display: flex; gap: 8px; align-items: baseline;
+  display: flex; gap: 8px 16px; align-items: baseline; justify-content: space-between; flex-wrap: wrap;
 }
 .card-totals b { color: var(--txt); font-size: 15px; }
-.card-totals .dim { color: var(--txt-3); letter-spacing: 0.3px; margin-left: auto; }
+.ct-scores { white-space: nowrap; }
+.card-totals .dim { color: var(--txt-3); letter-spacing: 0.3px; }
 
 @media print {
   body > #topbar, #layout { display: none !important; }
@@ -560,9 +561,11 @@ table.scoretable { width: 100%; border-collapse: collapse; font-size: 12px; marg
   .modal { padding: 0; height: 100dvh; }
   .modal-card, .modal-card.wide {
     border-radius: 0; width: 100%; height: 100dvh; max-height: 100dvh;
-    padding: calc(14px + env(safe-area-inset-top)) 13px calc(64px + env(safe-area-inset-bottom));
+    padding: calc(14px + env(safe-area-inset-top)) 13px calc(24px + env(safe-area-inset-bottom));
   }
-  #cardBody, #reportBody { padding-bottom: 24px; }
+  /* Extended Card & Report: stack the note under the scoring, keep it clear of the bar */
+  .card-totals { flex-direction: column; align-items: flex-start; gap: 5px; margin-bottom: 16px; }
+  .ct-scores { font-size: 13px; }
   .modal-head { margin-bottom: 10px; gap: 8px; }
   .modal-head h1 { font-size: 18px; }
   .modal-sub { font-size: 10px; margin-top: 3px; }
