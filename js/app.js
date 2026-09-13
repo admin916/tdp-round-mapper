@@ -492,9 +492,7 @@ const courseHoleLayer = L.layerGroup().addTo(map);
 COURSE.holes.forEach(h => {
   L.polyline(h.line, {color: '#a8e6be', weight: 2, opacity: 0.7, interactive: false}).addTo(courseHoleLayer);
   L.polygon(h.green.polygons || h.green.poly, {...OVERLAY_STYLE.green, interactive: false}).addTo(courseHoleLayer);
-  L.marker(h.tee, {icon: L.divIcon({className: 'course-hole-marker', html: `<span>${h.num}</span>`, iconSize: [26, 26], iconAnchor: [13, 13]}),
-    title: `Open hole ${h.num}`, keyboard: true}).on('click', () => gotoHole(h.num)).addTo(courseHoleLayer);
-});
+});   // hole numbers live in the rail at the top, not on the map
 const featureCount = type => COURSE.overlays?.[type]?.length || 0;
 const expectedHoles = COURSE.coverage?.expectedHoles;
 const coverageText = `${COURSE.holes.length}${expectedHoles ? '/' + expectedHoles : ''} holes mapped · ` +

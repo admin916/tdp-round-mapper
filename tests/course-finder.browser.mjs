@@ -92,7 +92,7 @@ try {
   assert.equal(await page.evaluate(()=>window.TDPMap.hole().num),6);
   await page.keyboard.press('p');assert.equal(await page.evaluate(()=>window.TDPMap.hole().num),4);
   assert.equal(await page.$('#courseModal:not(.hidden)'),null,'opening a map exits the finder');
-  assert.equal(await page.$$('.course-hole-marker').then(els=>els.length),9,'all mapped holes appear on the main map');
+  assert.equal(await page.$$('.course-hole-marker').then(els=>els.length),0,'hole numbers stay in the top rail, not on the map');
   assert.match(await page.$eval('#mapCoverage',el=>el.textContent),/fairways.*bunkers/);
   const savedGeometry=await page.evaluate(()=>JSON.parse(localStorage.getItem('tdp.course.data.osm-way-2')));
   assert.ok(savedGeometry.overlays.fairway.length && savedGeometry.overlays.bunker.length,'terrain is saved with the course');

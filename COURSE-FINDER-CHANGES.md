@@ -1,5 +1,7 @@
 ## Continuation — 13 September 2026 (aim, Augusta download, full-screen editor)
 
+- The numbered hole badges on the main map were removed at Lennon's request (build 14); the hole rail at the top already carries them. The faint routing and greens of the whole course remain.
+
 Reported problems and what was found:
 
 - **Aim/Heat left the selected hole.** The planner now works inside the selected hole's corridor (`js/hole-spatial.js`): every candidate landing point must belong to this hole (own green, within 45 m of its routing, nearer to it than to any neighbouring hole, and inside the course boundary when one exists) and must advance along the routing, which also follows doglegs instead of aiming at the pin bearing only. Landing targets prefer short grass; forward tee boxes are never a target; where a fairway only starts beyond driver range (Augusta 11) the planner falls back to playable ground on the hole rather than suggesting a 9-iron lay-up to a tee box. Holes with no fairway polygons treat unmapped ground as playable and say so in the status text. A sweep of every hole on Augusta National, Valderrama, Sotogrande, Wentworth West and CostaTerra puts each Aim target on this hole's fairway or green (Augusta 11 lands on unmapped ground short of the mapped fairway).

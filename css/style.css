@@ -709,7 +709,6 @@ button.course-item { color: var(--txt); font: inherit; width: 100%; text-align: 
 .course-item .ci-main { min-width: 0; overflow-wrap: anywhere; }
 #courseList .auth-actions { flex-wrap: wrap; }
 #loadPlace { width: 100%; flex-basis: 100%; padding: 14px; }
-.course-hole-marker span { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #102b23; color: #fff; border: 2px solid #8cddb2; font-size: 12px; font-weight: 750; box-shadow: 0 2px 6px #0008; }
 #mapCoverage { position: absolute; bottom: 38px; left: 10px; z-index: 800; max-width: calc(100% - 65px); padding: 6px 9px; border-radius: 8px; background: var(--panel); color: var(--txt-2); font-size: 10px; line-height: 1.5; pointer-events: none; }
 #mapCoverage strong { display: block; color: var(--txt); font-size: 12px; }
 @media (max-width: 900px) { #mapCoverage { bottom: 174px; } }
