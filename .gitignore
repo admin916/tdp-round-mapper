@@ -1,0 +1,6 @@
+node_modules/
+www/
+ios/App/App/public/
+.DS_Store
+build/
+*.xcarchive

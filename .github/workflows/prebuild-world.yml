@@ -1,0 +1,62 @@
+# World course catalogue pre-build — runs the offline OpenStreetMap pipeline on free
+# GitHub runners, one batch of countries per job, and upserts into Supabase.
+#   Manual: Actions → "Prebuild world courses" → Run workflow (optionally a single Geofabrik id)
+#   Scheduled: 1st of each month (OSM mapping keeps improving).
+# Secrets required: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+name: Prebuild world courses
+on:
+  workflow_dispatch:
+    inputs:
+      ids:
+        description: "Comma-separated Geofabrik ids to build (blank = whole world)"
+        required: false
+        default: ""
+      push:
+        description: "Push into the live catalogue"
+        type: boolean
+        default: true
+  schedule:
+    - cron: "0 3 1 * *"
+env:
+  BATCHES: 40
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        run: |
+          if [ -n "${{ github.event.inputs.ids }}" ]; then echo 'matrix=["ids"]' >> "$GITHUB_OUTPUT";
+          else echo "matrix=$(seq -s, 1 $BATCHES | sed 's/^/[/;s/$/]/')" >> "$GITHUB_OUTPUT"; fi
+  build:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 6          # be a good citizen to Geofabrik's download servers
+      matrix:
+        batch: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Install osmium
+        run: sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
+      - name: Build courses
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          PUSH=""; [ "${{ github.event.inputs.push || 'true' }}" = "true" ] && PUSH="--push"
+          if [ "${{ matrix.batch }}" = "ids" ]; then node scripts/prebuild-world.mjs --ids "${{ github.event.inputs.ids }}" $PUSH;
+          else node scripts/prebuild-world.mjs --batch ${{ matrix.batch }}/$BATCHES --skip-gb $PUSH; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prebuild-reports-${{ matrix.batch }}
+          path: |
+            build/prebuild/*/report.json
+            build/prebuild-world-summary.tsv
+          if-no-files-found: ignore

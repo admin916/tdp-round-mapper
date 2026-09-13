@@ -10,8 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <link rel="manifest" href="manifest.json" />
 <title>TDP · Train Don't Play — Round Mapper</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
 <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -30,6 +29,8 @@
     <span class="wx-loading">fetching conditions…</span>
   </div>
   <div class="top-actions">
+    <button class="btn ghost profile-chip" id="btnProfile" title="Sign in">Sign in</button>
+    <button class="btn ghost" id="btnRounds" title="Round history">📋&nbsp;Rounds</button>
     <button class="btn ghost" id="btnCourses" title="Choose course">⛳&nbsp;Course</button>
     <button class="btn ghost" id="btnChat" title="Chat with the course caddie (local Hermes)">💬&nbsp;Caddie</button>
     <button class="btn ghost" id="btnUnits" title="Switch yards / metres">yd</button>
@@ -61,6 +62,8 @@
     <div id="mapTools">
       <button class="map-btn" id="btnCourse" title="See the whole course">⤢&nbsp;Course</button>
       <button class="map-btn" id="btnHole" title="Zoom to this hole">⚑&nbsp;Hole</button>
+      <button class="map-btn" id="btnHeat" title="Expected-strokes heat map for this hole">🔥&nbsp;Heat</button>
+      <button class="map-btn" id="btnTarget" title="Best club and landing zone from where the ball lies">🎯&nbsp;Aim</button>
     </div>
     <div id="mapHint">Tap a hole above · tap the map to add a shot · drag any point to adjust · pinch to zoom</div>
   </main>
@@ -176,11 +179,18 @@
     <div class="modal-head">
       <div>
         <h1>Choose Course</h1>
-        <div class="modal-sub">Valderrama is fully mapped for this demo. More courses load from TDP's course library — OpenStreetMap geometry + the 25,000-course API.</div>
+        <div class="modal-sub">Find courses worldwide by name and location, preview them, and save them even when their holes are not mapped yet. Course data © OpenStreetMap contributors.</div>
       </div>
       <div><button class="btn ghost" id="btnCloseCourse">Close</button></div>
     </div>
-    <input type="text" id="courseSearch" class="course-search" placeholder="Search a course…" />
+    <input type="text" id="courseSearch" class="course-search" placeholder="Club name, town or country…" />
+    <div id="courseFilters" class="course-filters">
+      <button class="chip" id="fNear" title="Courses closest to you">📍 Near me</button>
+      <button class="chip" id="fTour" title="2026 PGA Tour, DP World Tour, LIV and major venues">🏆 Tour venues</button>
+      <button class="chip" id="fFull" title="Library courses with complete numbered hole geometry">✅ Hole maps</button>
+      <select id="fCountry" class="chip chip-select" title="Country"><option value="">🌍 All countries</option></select>
+      <a class="chip" id="fGlobe" href="#" target="_blank" rel="noopener" title="Browse the whole catalogue on the God's Eye globe">🛰 Globe</a>
+    </div>
     <div id="courseList"></div>
   </div>
 </div>
@@ -251,6 +261,7 @@
         <div class="modal-sub" id="reportSub"></div>
       </div>
       <div>
+        <button class="btn primary" id="btnFinishRound">Finish &amp; Save Round</button>
         <button class="btn ghost" id="btnPrint">Print / PDF</button>
         <button class="btn ghost" id="btnCloseSummary">Close</button>
       </div>
@@ -259,10 +270,114 @@
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- ══════════ ROUNDS HISTORY MODAL ══════════ -->
+<div id="roundsModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h1>Your Rounds</h1>
+        <div class="modal-sub" id="syncStatus"></div>
+      </div>
+      <div><button class="btn ghost" id="btnCloseRounds">Close</button></div>
+    </div>
+    <div id="attachBanner" class="attach-banner hidden">
+      <span id="attachMsg"></span>
+      <button class="btn primary tiny" id="btnAttachRounds">Attach to my profile</button>
+    </div>
+    <div id="sessionsPanel"></div>
+    <div id="roundsList"><div class="course-empty">Loading…</div></div>
+  </div>
+</div>
+
+<!-- ══════════ SIGN IN MODAL ══════════ -->
+<div id="authModal" class="modal hidden">
+  <div class="modal-card narrow">
+    <div class="modal-head">
+      <div>
+        <h1>Sign in to TDP</h1>
+        <div class="modal-sub">Your rounds, footage and handicap follow you to any device.
+          No password — we email you a 6-digit code.</div>
+      </div>
+      <div><button class="btn ghost" id="btnCloseAuth">Close</button></div>
+    </div>
+
+    <div id="authStepEmail">
+      <button class="btn apple-btn hidden" id="btnApple"> Sign in with Apple</button>
+      <div class="auth-divider hidden" id="authDivider"><span>or</span></div>
+      <input type="email" id="authEmail" class="auth-input" placeholder="you@club.com" autocomplete="email" />
+      <div class="auth-actions">
+        <button class="btn primary" id="btnSendCode">Email me a code</button>
+        <button class="btn ghost" id="btnGuest">Continue as guest</button>
+      </div>
+    </div>
+
+    <div id="authStepCode" class="hidden">
+      <div class="auth-hint" id="authCodeHint"></div>
+      <input type="text" id="authCode" class="auth-input auth-code" placeholder="123456"
+             inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+      <div class="auth-actions">
+        <button class="btn primary" id="btnVerifyCode">Sign in</button>
+        <button class="btn ghost" id="btnCodeBack">Different email</button>
+      </div>
+    </div>
+
+    <div class="auth-error" id="authError"></div>
+  </div>
+</div>
+
+<!-- ══════════ PROFILE MODAL ══════════ -->
+<div id="profileModal" class="modal hidden">
+  <div class="modal-card narrow">
+    <div class="modal-head">
+      <div>
+        <h1>Your Profile</h1>
+        <div class="modal-sub">Applied to every new round and to the caddie's advice.</div>
+      </div>
+      <div><button class="btn ghost" id="btnCloseProfile">Close</button></div>
+    </div>
+
+    <label class="pf-label">Display name<input type="text" id="pfName" class="auth-input" /></label>
+    <label class="pf-label">Home club<input type="text" id="pfClub" class="auth-input" /></label>
+    <div class="pf-row">
+      <label class="pf-label">Default tees
+        <select id="pfTees" class="auth-input">
+          <option>White</option><option>Yellow</option><option>Blue</option>
+          <option>Red</option><option>Championship</option>
+        </select>
+      </label>
+      <label class="pf-label">Units
+        <select id="pfUnits" class="auth-input">
+          <option value="yd">yards</option><option value="m">metres</option>
+        </select>
+      </label>
+    </div>
+    <label class="pf-label">WHS / handicap ID<input type="text" id="pfWhs" class="auth-input" placeholder="optional" /></label>
+    <div class="pf-static">Handicap index: <b id="pfHcp">—</b></div>
+
+    <div class="auth-actions">
+      <button class="btn primary" id="btnSaveProfile">Save</button>
+      <button class="btn ghost" id="btnSignOut">Sign out</button>
+    </div>
+    <div class="auth-error" id="profileError"></div>
+  </div>
+</div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
 <script src="data/course-data.js"></script>
 <script src="data/course-sotogrande.js"></script>
+<script src="data/course-wentworth.js"></script>
+<script src="data/course-costaterra.js"></script>
+<script src="vendor/supabase/supabase.js"></script>
+<script src="js/supa.js"></script>
+<script src="js/course-finder.js"></script>
+<script src="js/course-package.js"></script>
+<script src="js/course-editor.js"></script>
 <script src="js/app.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/sessions.js"></script>
+<script src="js/rounds-ui.js"></script>
+<script src="js/heatmap.js"></script>
+<script src="js/target.js"></script>
 </body>
 </html>

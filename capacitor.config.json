@@ -1,0 +1,20 @@
+{
+  "appId": "com.v3tr4.tdp",
+  "appName": "TDP",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#0c1014"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 600,
+      "backgroundColor": "#0c1014",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0c1014"
+    }
+  }
+}

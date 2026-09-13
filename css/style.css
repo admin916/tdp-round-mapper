@@ -485,6 +485,10 @@ table.scoretable { width: 100%; border-collapse: collapse; font-size: 12px; marg
 .ci-live { font-size: 9px; font-weight: 700; letter-spacing: 1px; color: var(--accent); background: var(--accent-soft); padding: 1.5px 6px; border-radius: 6px; vertical-align: 1px; }
 .ci-soon { font-size: 9px; font-weight: 700; letter-spacing: 1px; color: var(--txt-3); background: rgba(255, 255, 255, 0.05); padding: 1.5px 6px; border-radius: 6px; vertical-align: 1px; }
 .ci-go { color: var(--accent); font-size: 20px; }
+.ci-tour { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; color: #241a00; background: var(--gold); padding: 1.5px 6px; border-radius: 6px; vertical-align: 1px; margin-right: 2px; }
+.course-section { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--txt-3); margin: 14px 2px 8px; }
+.course-section:first-child { margin-top: 2px; }
+.course-hint { font-size: 11px; color: var(--txt-3); text-align: center; padding: 14px 8px 4px; line-height: 1.5; }
 .course-empty { font-size: 12px; color: var(--txt-3); padding: 14px; text-align: center; line-height: 1.5; }
 
 /* ═══════════ floating map tools ═══════════ */
@@ -592,3 +596,136 @@ table.scoretable { width: 100%; border-collapse: collapse; font-size: 12px; marg
 @media (max-width: 900px) and (max-height: 620px) {
   #panel { height: 72vh; max-height: 72vh; }
 }
+
+/* ═══════════ AUTH & PROFILE (Phase 2) ═══════════ */
+.modal-card.narrow { width: min(440px, 100%); }
+.profile-chip.signed-in {
+  color: var(--accent); border-color: rgba(35, 198, 139, 0.45);
+  background: var(--accent-soft); font-weight: 800; letter-spacing: 1px;
+  min-width: 40px;
+}
+.auth-input {
+  width: 100%; margin-top: 6px; padding: 11px 13px; border-radius: 10px;
+  border: 1px solid var(--line-2); background: rgba(255, 255, 255, 0.03);
+  color: var(--txt); font-size: 14px; font-family: inherit; outline: none;
+}
+.auth-input:focus { border-color: var(--accent); background: rgba(35, 198, 139, 0.05); }
+.auth-code { font-size: 24px; letter-spacing: 10px; text-align: center; font-weight: 800; }
+.auth-actions { display: flex; gap: 10px; margin-top: 14px; align-items: center; }
+.auth-error { color: var(--red); font-size: 12.5px; margin-top: 10px; min-height: 16px; }
+.auth-hint { color: var(--txt-2); font-size: 13px; margin-bottom: 8px; }
+.pf-label { display: block; color: var(--txt-2); font-size: 12px; margin-top: 12px; }
+.pf-row { display: flex; gap: 12px; }
+.pf-row .pf-label { flex: 1; }
+.pf-static { color: var(--txt-2); font-size: 13px; margin-top: 14px; }
+.pf-static b { color: var(--gold); }
+select.auth-input { appearance: none; -webkit-appearance: none; }
+#authStepEmail.hidden, #authStepCode.hidden { display: none; }
+
+/* ═══════════ ROUNDS HISTORY (Phase 3) ═══════════ */
+.round-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px;
+  margin-bottom: 8px; background: rgba(255, 255, 255, 0.02);
+}
+.ri-name { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.ri-loc { color: var(--txt-2); font-size: 12px; margin-top: 2px; }
+.rnd-badge {
+  font-size: 8.5px; font-weight: 800; letter-spacing: 1.4px; border-radius: 6px;
+  padding: 2px 7px; vertical-align: 1px;
+}
+.rnd-badge.done { background: var(--accent-soft); color: var(--accent); }
+.rnd-badge.live { background: var(--gold-soft); color: var(--gold); }
+.rnd-badge.local { background: rgba(255, 255, 255, 0.06); color: var(--txt-2); }
+.attach-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  border: 1px solid rgba(216, 180, 90, 0.45); background: var(--gold-soft);
+  color: var(--txt); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;
+  font-size: 13px;
+}
+.attach-banner.hidden { display: none; }
+
+/* ═══════════ SIGN IN WITH APPLE (Phase 4) ═══════════ */
+.apple-btn {
+  width: 100%; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 600;
+  background: #fff; color: #000; border: none; margin-bottom: 2px;
+  font-family: -apple-system, "SF Pro Text", "Segoe UI", sans-serif;
+}
+.apple-btn:hover { filter: brightness(0.92); }
+.apple-btn.hidden { display: none; }
+.auth-divider {
+  display: flex; align-items: center; gap: 10px; margin: 12px 0 2px;
+  color: var(--txt-3); font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+}
+.auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--line-2); }
+.auth-divider.hidden { display: none; }
+
+/* ═══════════ SESSIONS + HEAT + TOAST (Phase 5) ═══════════ */
+.sess-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.sess-label { font-size: 9.5px; letter-spacing: 1.6px; color: var(--txt-3); font-weight: 700; }
+.sess-chip {
+  padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--line-2); color: var(--txt-2); background: rgba(255, 255, 255, 0.02);
+}
+.sess-chip.on { color: var(--accent); border-color: rgba(35, 198, 139, 0.5); background: var(--accent-soft); }
+.sess-input {
+  flex: 1; min-width: 160px; padding: 7px 11px; border-radius: 999px; font-size: 12px;
+  border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); color: var(--txt); outline: none;
+}
+.sess-input:focus { border-color: var(--accent); }
+.sess-hint { color: var(--txt-3); font-size: 11.5px; margin-bottom: 10px; }
+.sess-hint b { color: var(--txt-2); }
+.rnd-badge.session { background: rgba(79, 143, 226, 0.16); color: var(--blue); }
+
+.map-btn.on { color: var(--accent); border-color: rgba(35, 198, 139, 0.5); background: var(--accent-soft); }
+.heat-overlay { image-rendering: auto; filter: blur(3px); }
+
+.tdp-toast {
+  position: fixed; bottom: 26px; left: 50%; transform: translate(-50%, 20px);
+  background: var(--panel-solid); border: 1px solid rgba(35, 198, 139, 0.45);
+  color: var(--txt); font-size: 13px; padding: 11px 18px; border-radius: 12px;
+  box-shadow: var(--shadow); z-index: 3000; opacity: 0; transition: all 0.4s ease;
+  pointer-events: none;
+}
+.tdp-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ═══════════ COURSE FINDER DISCOVERY ═══════════ */
+.ci-src {
+  font-size: 8.5px; font-weight: 800; letter-spacing: 1.4px; border-radius: 6px;
+  padding: 2px 7px; margin-left: 8px; vertical-align: 1px;
+}
+.ci-src.lib { background: var(--accent-soft); color: var(--accent); }
+.ci-src.osm { background: rgba(79, 143, 226, 0.16); color: var(--blue); }
+
+/* ── aim / landing-zone layer (js/target.js) ── */
+.aim-label { pointer-events: none; }
+.aim-pill { transform: translate(-50%, 10px); white-space: nowrap; font-size: 11px; line-height: 1.2; padding: 3px 7px; border-radius: 999px;
+  background: rgba(10, 14, 18, 0.85); color: #fff; border: 1px solid var(--c); box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+.aim-pill b { color: var(--c); }
+.aim-pill.above { transform: translate(-50%, -28px); }
+
+/* ── course finder filters ── */
+.course-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.chip { font: inherit; font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line, rgba(255,255,255,.14));
+  background: transparent; color: var(--txt-2, #cfd6dd); cursor: pointer; text-decoration: none; line-height: 1.2; }
+.chip:hover { border-color: var(--txt-3); color: var(--txt); }
+.chip.on { color: var(--accent); border-color: rgba(35, 198, 139, 0.5); background: var(--accent-soft); }
+.chip-select { appearance: none; -webkit-appearance: none; padding-right: 14px; max-width: 46vw; }
+.ci-q { font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 2px 6px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
+.ci-q.full { background: var(--accent-soft); color: var(--accent); }
+.ci-q.partial { background: rgba(245, 185, 66, 0.16); color: #f5b942; }
+.ci-q.tour { background: rgba(255, 77, 109, 0.16); color: #ff4d6d; }
+
+/* Native buttons in the course finder inherit the app theme. */
+button.course-item { color: var(--txt); font: inherit; }
+#placeStatus .btn { margin: 6px 6px 0 0; }
+
+/* Course corrections remain usable on a phone and on the reviewer's desktop. */
+#editorMap { height: min(48vh, 480px); min-height: 280px; border-radius: 12px; margin: 12px 0; }
+.editor-heading, .editor-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:12px 0; }
+.editor-heading { justify-content:space-between; }
+.editor-fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin:12px 0; }
+.editor-fields label { display:flex; flex-direction:column; gap:5px; font-size:12px; }
+.editor-fields input,.editor-fields select,.editor-fields textarea,.editor-toolbar input,.editor-toolbar select { background:var(--bg,#131b22);color:inherit;border:1px solid var(--line,#41505b);border-radius:7px;padding:10px;min-height:42px;max-width:100%; }
+.editor-toolbar input { width:60px; } #edFeatures { max-width:100%;flex:1;min-width:160px; }
+#edStatus { min-height:40px; } .editor-toolbar .btn { min-height:44px; }

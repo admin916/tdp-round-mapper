@@ -1,0 +1,1445 @@
+{
+ "_note": "Geofabrik extracts for the world course pre-build (scripts/prebuild-world.mjs). One entry per country; the US is split into states. Generated from download.geofabrik.de/index-v1.json.",
+ "countries": [
+  {
+   "id": "andorra",
+   "iso": "AD",
+   "path": "europe/andorra",
+   "name": "Andorra"
+  },
+  {
+   "id": "afghanistan",
+   "iso": "AF",
+   "path": "asia/afghanistan",
+   "name": "Afghanistan"
+  },
+  {
+   "id": "albania",
+   "iso": "AL",
+   "path": "europe/albania",
+   "name": "Albania"
+  },
+  {
+   "id": "armenia",
+   "iso": "AM",
+   "path": "asia/armenia",
+   "name": "Armenia"
+  },
+  {
+   "id": "angola",
+   "iso": "AO",
+   "path": "africa/angola",
+   "name": "Angola"
+  },
+  {
+   "id": "argentina",
+   "iso": "AR",
+   "path": "south-america/argentina",
+   "name": "Argentina"
+  },
+  {
+   "id": "austria",
+   "iso": "AT",
+   "path": "europe/austria",
+   "name": "Austria"
+  },
+  {
+   "id": "australia",
+   "iso": "AU",
+   "path": "australia-oceania/australia",
+   "name": "Australia"
+  },
+  {
+   "id": "azerbaijan",
+   "iso": "AZ",
+   "path": "asia/azerbaijan",
+   "name": "Azerbaijan"
+  },
+  {
+   "id": "bosnia-herzegovina",
+   "iso": "BA",
+   "path": "europe/bosnia-herzegovina",
+   "name": "Bosnia-Herzegovina"
+  },
+  {
+   "id": "bangladesh",
+   "iso": "BD",
+   "path": "asia/bangladesh",
+   "name": "Bangladesh"
+  },
+  {
+   "id": "belgium",
+   "iso": "BE",
+   "path": "europe/belgium",
+   "name": "Belgium"
+  },
+  {
+   "id": "burkina-faso",
+   "iso": "BF",
+   "path": "africa/burkina-faso",
+   "name": "Burkina Faso"
+  },
+  {
+   "id": "bulgaria",
+   "iso": "BG",
+   "path": "europe/bulgaria",
+   "name": "Bulgaria"
+  },
+  {
+   "id": "burundi",
+   "iso": "BI",
+   "path": "africa/burundi",
+   "name": "Burundi"
+  },
+  {
+   "id": "benin",
+   "iso": "BJ",
+   "path": "africa/benin",
+   "name": "Benin"
+  },
+  {
+   "id": "bolivia",
+   "iso": "BO",
+   "path": "south-america/bolivia",
+   "name": "Bolivia"
+  },
+  {
+   "id": "brazil",
+   "iso": "BR",
+   "path": "south-america/brazil",
+   "name": "Brazil"
+  },
+  {
+   "id": "bahamas",
+   "iso": "BS",
+   "path": "central-america/bahamas",
+   "name": "Bahamas"
+  },
+  {
+   "id": "bhutan",
+   "iso": "BT",
+   "path": "asia/bhutan",
+   "name": "Bhutan"
+  },
+  {
+   "id": "botswana",
+   "iso": "BW",
+   "path": "africa/botswana",
+   "name": "Botswana"
+  },
+  {
+   "id": "belarus",
+   "iso": "BY",
+   "path": "europe/belarus",
+   "name": "Belarus"
+  },
+  {
+   "id": "belize",
+   "iso": "BZ",
+   "path": "central-america/belize",
+   "name": "Belize"
+  },
+  {
+   "id": "canada",
+   "iso": "CA",
+   "path": "north-america/canada",
+   "name": "Canada"
+  },
+  {
+   "id": "congo-democratic-republic",
+   "iso": "CD",
+   "path": "africa/congo-democratic-republic",
+   "name": "Congo (Democratic Republic/Kinshasa)"
+  },
+  {
+   "id": "central-african-republic",
+   "iso": "CF",
+   "path": "africa/central-african-republic",
+   "name": "Central African Republic"
+  },
+  {
+   "id": "congo-brazzaville",
+   "iso": "CG",
+   "path": "africa/congo-brazzaville",
+   "name": "Congo (Republic/Brazzaville)"
+  },
+  {
+   "id": "switzerland",
+   "iso": "CH",
+   "path": "europe/switzerland",
+   "name": "Switzerland"
+  },
+  {
+   "id": "ivory-coast",
+   "iso": "CI",
+   "path": "africa/ivory-coast",
+   "name": "Ivory Coast"
+  },
+  {
+   "id": "cook-islands",
+   "iso": "CK",
+   "path": "australia-oceania/cook-islands",
+   "name": "Cook Islands"
+  },
+  {
+   "id": "chile",
+   "iso": "CL",
+   "path": "south-america/chile",
+   "name": "Chile"
+  },
+  {
+   "id": "cameroon",
+   "iso": "CM",
+   "path": "africa/cameroon",
+   "name": "Cameroon"
+  },
+  {
+   "id": "china",
+   "iso": "CN",
+   "path": "asia/china",
+   "name": "China"
+  },
+  {
+   "id": "colombia",
+   "iso": "CO",
+   "path": "south-america/colombia",
+   "name": "Colombia"
+  },
+  {
+   "id": "costa-rica",
+   "iso": "CR",
+   "path": "central-america/costa-rica",
+   "name": "Costa Rica"
+  },
+  {
+   "id": "cuba",
+   "iso": "CU",
+   "path": "central-america/cuba",
+   "name": "Cuba"
+  },
+  {
+   "id": "cape-verde",
+   "iso": "CV",
+   "path": "africa/cape-verde",
+   "name": "Cape Verde"
+  },
+  {
+   "id": "cyprus",
+   "iso": "CY",
+   "path": "europe/cyprus",
+   "name": "Cyprus"
+  },
+  {
+   "id": "czech-republic",
+   "iso": "CZ",
+   "path": "europe/czech-republic",
+   "name": "Czech Republic"
+  },
+  {
+   "id": "germany",
+   "iso": "DE",
+   "path": "europe/germany",
+   "name": "Germany"
+  },
+  {
+   "id": "djibouti",
+   "iso": "DJ",
+   "path": "africa/djibouti",
+   "name": "Djibouti"
+  },
+  {
+   "id": "denmark",
+   "iso": "DK",
+   "path": "europe/denmark",
+   "name": "Denmark"
+  },
+  {
+   "id": "algeria",
+   "iso": "DZ",
+   "path": "africa/algeria",
+   "name": "Algeria"
+  },
+  {
+   "id": "ecuador",
+   "iso": "EC",
+   "path": "south-america/ecuador",
+   "name": "Ecuador"
+  },
+  {
+   "id": "estonia",
+   "iso": "EE",
+   "path": "europe/estonia",
+   "name": "Estonia"
+  },
+  {
+   "id": "egypt",
+   "iso": "EG",
+   "path": "africa/egypt",
+   "name": "Egypt"
+  },
+  {
+   "id": "eritrea",
+   "iso": "ER",
+   "path": "africa/eritrea",
+   "name": "Eritrea"
+  },
+  {
+   "id": "spain",
+   "iso": "ES",
+   "path": "europe/spain",
+   "name": "Spain"
+  },
+  {
+   "id": "ethiopia",
+   "iso": "ET",
+   "path": "africa/ethiopia",
+   "name": "Ethiopia"
+  },
+  {
+   "id": "finland",
+   "iso": "FI",
+   "path": "europe/finland",
+   "name": "Finland"
+  },
+  {
+   "id": "fiji",
+   "iso": "FJ",
+   "path": "australia-oceania/fiji",
+   "name": "Fiji"
+  },
+  {
+   "id": "micronesia",
+   "iso": "FM",
+   "path": "australia-oceania/micronesia",
+   "name": "Micronesia"
+  },
+  {
+   "id": "faroe-islands",
+   "iso": "FO",
+   "path": "europe/faroe-islands",
+   "name": "Faroe Islands"
+  },
+  {
+   "id": "france",
+   "iso": "FR",
+   "path": "europe/france",
+   "name": "France"
+  },
+  {
+   "id": "gabon",
+   "iso": "GA",
+   "path": "africa/gabon",
+   "name": "Gabon"
+  },
+  {
+   "id": "united-kingdom",
+   "iso": "GB",
+   "path": "europe/united-kingdom",
+   "name": "United Kingdom"
+  },
+  {
+   "id": "georgia",
+   "iso": "GE",
+   "path": "europe/georgia",
+   "name": "Georgia"
+  },
+  {
+   "id": "guyane",
+   "iso": "GF",
+   "path": "europe/france/guyane",
+   "name": "Guyane"
+  },
+  {
+   "id": "ghana",
+   "iso": "GH",
+   "path": "africa/ghana",
+   "name": "Ghana"
+  },
+  {
+   "id": "greenland",
+   "iso": "GL",
+   "path": "north-america/greenland",
+   "name": "Greenland"
+  },
+  {
+   "id": "guinea",
+   "iso": "GN",
+   "path": "africa/guinea",
+   "name": "Guinea"
+  },
+  {
+   "id": "equatorial-guinea",
+   "iso": "GQ",
+   "path": "africa/equatorial-guinea",
+   "name": "Equatorial Guinea"
+  },
+  {
+   "id": "greece",
+   "iso": "GR",
+   "path": "europe/greece",
+   "name": "Greece"
+  },
+  {
+   "id": "guatemala",
+   "iso": "GT",
+   "path": "central-america/guatemala",
+   "name": "Guatemala"
+  },
+  {
+   "id": "guinea-bissau",
+   "iso": "GW",
+   "path": "africa/guinea-bissau",
+   "name": "Guinea-Bissau"
+  },
+  {
+   "id": "guyana",
+   "iso": "GY",
+   "path": "south-america/guyana",
+   "name": "Guyana"
+  },
+  {
+   "id": "honduras",
+   "iso": "HN",
+   "path": "central-america/honduras",
+   "name": "Honduras"
+  },
+  {
+   "id": "croatia",
+   "iso": "HR",
+   "path": "europe/croatia",
+   "name": "Croatia"
+  },
+  {
+   "id": "haiti-and-domrep",
+   "iso": "HT",
+   "path": "central-america/haiti-and-domrep",
+   "name": "Haiti and Dominican Republic"
+  },
+  {
+   "id": "hungary",
+   "iso": "HU",
+   "path": "europe/hungary",
+   "name": "Hungary"
+  },
+  {
+   "id": "indonesia",
+   "iso": "ID",
+   "path": "asia/indonesia",
+   "name": "Indonesia (with East Timor)"
+  },
+  {
+   "id": "ireland-and-northern-ireland",
+   "iso": "IE",
+   "path": "europe/ireland-and-northern-ireland",
+   "name": "Ireland and Northern Ireland"
+  },
+  {
+   "id": "india",
+   "iso": "IN",
+   "path": "asia/india",
+   "name": "India"
+  },
+  {
+   "id": "iraq",
+   "iso": "IQ",
+   "path": "asia/iraq",
+   "name": "Iraq"
+  },
+  {
+   "id": "iran",
+   "iso": "IR",
+   "path": "asia/iran",
+   "name": "Iran"
+  },
+  {
+   "id": "iceland",
+   "iso": "IS",
+   "path": "europe/iceland",
+   "name": "Iceland"
+  },
+  {
+   "id": "italy",
+   "iso": "IT",
+   "path": "europe/italy",
+   "name": "Italy"
+  },
+  {
+   "id": "jamaica",
+   "iso": "JM",
+   "path": "central-america/jamaica",
+   "name": "Jamaica"
+  },
+  {
+   "id": "jordan",
+   "iso": "JO",
+   "path": "asia/jordan",
+   "name": "Jordan"
+  },
+  {
+   "id": "japan",
+   "iso": "JP",
+   "path": "asia/japan",
+   "name": "Japan"
+  },
+  {
+   "id": "kenya",
+   "iso": "KE",
+   "path": "africa/kenya",
+   "name": "Kenya"
+  },
+  {
+   "id": "kyrgyzstan",
+   "iso": "KG",
+   "path": "asia/kyrgyzstan",
+   "name": "Kyrgyzstan"
+  },
+  {
+   "id": "cambodia",
+   "iso": "KH",
+   "path": "asia/cambodia",
+   "name": "Cambodia"
+  },
+  {
+   "id": "kiribati",
+   "iso": "KI",
+   "path": "australia-oceania/kiribati",
+   "name": "Kiribati"
+  },
+  {
+   "id": "north-korea",
+   "iso": "KP",
+   "path": "asia/north-korea",
+   "name": "North Korea"
+  },
+  {
+   "id": "south-korea",
+   "iso": "KR",
+   "path": "asia/south-korea",
+   "name": "South Korea"
+  },
+  {
+   "id": "kazakhstan",
+   "iso": "KZ",
+   "path": "asia/kazakhstan",
+   "name": "Kazakhstan"
+  },
+  {
+   "id": "laos",
+   "iso": "LA",
+   "path": "asia/laos",
+   "name": "Laos"
+  },
+  {
+   "id": "lebanon",
+   "iso": "LB",
+   "path": "asia/lebanon",
+   "name": "Lebanon"
+  },
+  {
+   "id": "liechtenstein",
+   "iso": "LI",
+   "path": "europe/liechtenstein",
+   "name": "Liechtenstein"
+  },
+  {
+   "id": "sri-lanka",
+   "iso": "LK",
+   "path": "asia/sri-lanka",
+   "name": "Sri Lanka"
+  },
+  {
+   "id": "liberia",
+   "iso": "LR",
+   "path": "africa/liberia",
+   "name": "Liberia"
+  },
+  {
+   "id": "lesotho",
+   "iso": "LS",
+   "path": "africa/lesotho",
+   "name": "Lesotho"
+  },
+  {
+   "id": "lithuania",
+   "iso": "LT",
+   "path": "europe/lithuania",
+   "name": "Lithuania"
+  },
+  {
+   "id": "luxembourg",
+   "iso": "LU",
+   "path": "europe/luxembourg",
+   "name": "Luxembourg"
+  },
+  {
+   "id": "latvia",
+   "iso": "LV",
+   "path": "europe/latvia",
+   "name": "Latvia"
+  },
+  {
+   "id": "libya",
+   "iso": "LY",
+   "path": "africa/libya",
+   "name": "Libya"
+  },
+  {
+   "id": "morocco",
+   "iso": "MA",
+   "path": "africa/morocco",
+   "name": "Morocco"
+  },
+  {
+   "id": "monaco",
+   "iso": "MC",
+   "path": "europe/monaco",
+   "name": "Monaco"
+  },
+  {
+   "id": "moldova",
+   "iso": "MD",
+   "path": "europe/moldova",
+   "name": "Moldova"
+  },
+  {
+   "id": "montenegro",
+   "iso": "ME",
+   "path": "europe/montenegro",
+   "name": "Montenegro"
+  },
+  {
+   "id": "madagascar",
+   "iso": "MG",
+   "path": "africa/madagascar",
+   "name": "Madagascar"
+  },
+  {
+   "id": "marshall-islands",
+   "iso": "MH",
+   "path": "australia-oceania/marshall-islands",
+   "name": "Marshall Islands"
+  },
+  {
+   "id": "pitcairn-islands",
+   "iso": "MH",
+   "path": "australia-oceania/pitcairn-islands",
+   "name": "Pitcairn Islands"
+  },
+  {
+   "id": "macedonia",
+   "iso": "MK",
+   "path": "europe/macedonia",
+   "name": "Macedonia"
+  },
+  {
+   "id": "mali",
+   "iso": "ML",
+   "path": "africa/mali",
+   "name": "Mali"
+  },
+  {
+   "id": "myanmar",
+   "iso": "MM",
+   "path": "asia/myanmar",
+   "name": "Myanmar (a.k.a. Burma)"
+  },
+  {
+   "id": "mongolia",
+   "iso": "MN",
+   "path": "asia/mongolia",
+   "name": "Mongolia"
+  },
+  {
+   "id": "mauritania",
+   "iso": "MR",
+   "path": "africa/mauritania",
+   "name": "Mauritania"
+  },
+  {
+   "id": "malta",
+   "iso": "MT",
+   "path": "europe/malta",
+   "name": "Malta"
+  },
+  {
+   "id": "mauritius",
+   "iso": "MU",
+   "path": "africa/mauritius",
+   "name": "Mauritius"
+  },
+  {
+   "id": "maldives",
+   "iso": "MV",
+   "path": "asia/maldives",
+   "name": "Maldives"
+  },
+  {
+   "id": "malawi",
+   "iso": "MW",
+   "path": "africa/malawi",
+   "name": "Malawi"
+  },
+  {
+   "id": "mexico",
+   "iso": "MX",
+   "path": "north-america/mexico",
+   "name": "Mexico"
+  },
+  {
+   "id": "malaysia-singapore-brunei",
+   "iso": "MY",
+   "path": "asia/malaysia-singapore-brunei",
+   "name": "Malaysia, Singapore, and Brunei"
+  },
+  {
+   "id": "mozambique",
+   "iso": "MZ",
+   "path": "africa/mozambique",
+   "name": "Mozambique"
+  },
+  {
+   "id": "namibia",
+   "iso": "NA",
+   "path": "africa/namibia",
+   "name": "Namibia"
+  },
+  {
+   "id": "new-caledonia",
+   "iso": "NC",
+   "path": "australia-oceania/new-caledonia",
+   "name": "New Caledonia"
+  },
+  {
+   "id": "niger",
+   "iso": "NE",
+   "path": "africa/niger",
+   "name": "Niger"
+  },
+  {
+   "id": "nigeria",
+   "iso": "NG",
+   "path": "africa/nigeria",
+   "name": "Nigeria"
+  },
+  {
+   "id": "nicaragua",
+   "iso": "NI",
+   "path": "central-america/nicaragua",
+   "name": "Nicaragua"
+  },
+  {
+   "id": "netherlands",
+   "iso": "NL",
+   "path": "europe/netherlands",
+   "name": "Netherlands"
+  },
+  {
+   "id": "norway",
+   "iso": "NO",
+   "path": "europe/norway",
+   "name": "Norway"
+  },
+  {
+   "id": "nepal",
+   "iso": "NP",
+   "path": "asia/nepal",
+   "name": "Nepal"
+  },
+  {
+   "id": "nauru",
+   "iso": "NR",
+   "path": "australia-oceania/nauru",
+   "name": "Nauru"
+  },
+  {
+   "id": "niue",
+   "iso": "NU",
+   "path": "australia-oceania/niue",
+   "name": "Niue"
+  },
+  {
+   "id": "new-zealand",
+   "iso": "NZ",
+   "path": "australia-oceania/new-zealand",
+   "name": "New Zealand"
+  },
+  {
+   "id": "panama",
+   "iso": "PA",
+   "path": "central-america/panama",
+   "name": "Panama"
+  },
+  {
+   "id": "peru",
+   "iso": "PE",
+   "path": "south-america/peru",
+   "name": "Peru"
+  },
+  {
+   "id": "papua-new-guinea",
+   "iso": "PG",
+   "path": "australia-oceania/papua-new-guinea",
+   "name": "Papua New Guinea"
+  },
+  {
+   "id": "philippines",
+   "iso": "PH",
+   "path": "asia/philippines",
+   "name": "Philippines"
+  },
+  {
+   "id": "pakistan",
+   "iso": "PK",
+   "path": "asia/pakistan",
+   "name": "Pakistan"
+  },
+  {
+   "id": "poland",
+   "iso": "PL",
+   "path": "europe/poland",
+   "name": "Poland"
+  },
+  {
+   "id": "israel-and-palestine",
+   "iso": "PS",
+   "path": "asia/israel-and-palestine",
+   "name": "Israel and Palestine"
+  },
+  {
+   "id": "portugal",
+   "iso": "PT",
+   "path": "europe/portugal",
+   "name": "Portugal"
+  },
+  {
+   "id": "palau",
+   "iso": "PW",
+   "path": "australia-oceania/palau",
+   "name": "Palau"
+  },
+  {
+   "id": "paraguay",
+   "iso": "PY",
+   "path": "south-america/paraguay",
+   "name": "Paraguay"
+  },
+  {
+   "id": "gcc-states",
+   "iso": "QA",
+   "path": "asia/gcc-states",
+   "name": "GCC States"
+  },
+  {
+   "id": "romania",
+   "iso": "RO",
+   "path": "europe/romania",
+   "name": "Romania"
+  },
+  {
+   "id": "serbia",
+   "iso": "RS",
+   "path": "europe/serbia",
+   "name": "Serbia"
+  },
+  {
+   "id": "russia",
+   "iso": "RU",
+   "path": "russia",
+   "name": "Russian Federation"
+  },
+  {
+   "id": "rwanda",
+   "iso": "RW",
+   "path": "africa/rwanda",
+   "name": "Rwanda"
+  },
+  {
+   "id": "solomon-islands",
+   "iso": "SB",
+   "path": "australia-oceania/solomon-islands",
+   "name": "Solomon Islands"
+  },
+  {
+   "id": "seychelles",
+   "iso": "SC",
+   "path": "africa/seychelles",
+   "name": "Seychelles"
+  },
+  {
+   "id": "sudan",
+   "iso": "SD",
+   "path": "africa/sudan",
+   "name": "Sudan"
+  },
+  {
+   "id": "sweden",
+   "iso": "SE",
+   "path": "europe/sweden",
+   "name": "Sweden"
+  },
+  {
+   "id": "saint-helena-ascension-and-tristan-da-cunha",
+   "iso": "SH",
+   "path": "africa/saint-helena-ascension-and-tristan-da-cunha",
+   "name": "Saint Helena, Ascension, and Tristan da Cunha"
+  },
+  {
+   "id": "slovenia",
+   "iso": "SI",
+   "path": "europe/slovenia",
+   "name": "Slovenia"
+  },
+  {
+   "id": "slovakia",
+   "iso": "SK",
+   "path": "europe/slovakia",
+   "name": "Slovakia"
+  },
+  {
+   "id": "sierra-leone",
+   "iso": "SL",
+   "path": "africa/sierra-leone",
+   "name": "Sierra Leone"
+  },
+  {
+   "id": "senegal-and-gambia",
+   "iso": "SN",
+   "path": "africa/senegal-and-gambia",
+   "name": "Senegal and Gambia"
+  },
+  {
+   "id": "somalia",
+   "iso": "SO",
+   "path": "africa/somalia",
+   "name": "Somalia"
+  },
+  {
+   "id": "suriname",
+   "iso": "SR",
+   "path": "south-america/suriname",
+   "name": "Suriname"
+  },
+  {
+   "id": "south-sudan",
+   "iso": "SS",
+   "path": "africa/south-sudan",
+   "name": "South Sudan"
+  },
+  {
+   "id": "sao-tome-and-principe",
+   "iso": "ST",
+   "path": "africa/sao-tome-and-principe",
+   "name": "Sao Tome and Principe"
+  },
+  {
+   "id": "el-salvador",
+   "iso": "SV",
+   "path": "central-america/el-salvador",
+   "name": "El Salvador"
+  },
+  {
+   "id": "syria",
+   "iso": "SY",
+   "path": "asia/syria",
+   "name": "Syria"
+  },
+  {
+   "id": "swaziland",
+   "iso": "SZ",
+   "path": "africa/swaziland",
+   "name": "Swaziland"
+  },
+  {
+   "id": "chad",
+   "iso": "TD",
+   "path": "africa/chad",
+   "name": "Chad"
+  },
+  {
+   "id": "togo",
+   "iso": "TG",
+   "path": "africa/togo",
+   "name": "Togo"
+  },
+  {
+   "id": "thailand",
+   "iso": "TH",
+   "path": "asia/thailand",
+   "name": "Thailand"
+  },
+  {
+   "id": "tajikistan",
+   "iso": "TJ",
+   "path": "asia/tajikistan",
+   "name": "Tajikistan"
+  },
+  {
+   "id": "east-timor",
+   "iso": "TL",
+   "path": "asia/east-timor",
+   "name": "East Timor"
+  },
+  {
+   "id": "turkmenistan",
+   "iso": "TM",
+   "path": "asia/turkmenistan",
+   "name": "Turkmenistan"
+  },
+  {
+   "id": "tunisia",
+   "iso": "TN",
+   "path": "africa/tunisia",
+   "name": "Tunisia"
+  },
+  {
+   "id": "tonga",
+   "iso": "TO",
+   "path": "australia-oceania/tonga",
+   "name": "Tonga"
+  },
+  {
+   "id": "turkey",
+   "iso": "TR",
+   "path": "europe/turkey",
+   "name": "Turkey"
+  },
+  {
+   "id": "tuvalu",
+   "iso": "TV",
+   "path": "australia-oceania/tuvalu",
+   "name": "Tuvalu"
+  },
+  {
+   "id": "taiwan",
+   "iso": "TW",
+   "path": "asia/taiwan",
+   "name": "Taiwan"
+  },
+  {
+   "id": "tanzania",
+   "iso": "TZ",
+   "path": "africa/tanzania",
+   "name": "Tanzania"
+  },
+  {
+   "id": "ukraine",
+   "iso": "UA",
+   "path": "europe/ukraine",
+   "name": "Ukraine (with Crimea)"
+  },
+  {
+   "id": "uganda",
+   "iso": "UG",
+   "path": "africa/uganda",
+   "name": "Uganda"
+  },
+  {
+   "id": "us/alabama",
+   "iso": "US",
+   "path": "north-america/us/alabama",
+   "name": "us/alabama"
+  },
+  {
+   "id": "us/alaska",
+   "iso": "US",
+   "path": "north-america/us/alaska",
+   "name": "us/alaska"
+  },
+  {
+   "id": "us/arizona",
+   "iso": "US",
+   "path": "north-america/us/arizona",
+   "name": "us/arizona"
+  },
+  {
+   "id": "us/arkansas",
+   "iso": "US",
+   "path": "north-america/us/arkansas",
+   "name": "us/arkansas"
+  },
+  {
+   "id": "us/california",
+   "iso": "US",
+   "path": "north-america/us/california",
+   "name": "us/california"
+  },
+  {
+   "id": "us/colorado",
+   "iso": "US",
+   "path": "north-america/us/colorado",
+   "name": "us/colorado"
+  },
+  {
+   "id": "us/connecticut",
+   "iso": "US",
+   "path": "north-america/us/connecticut",
+   "name": "us/connecticut"
+  },
+  {
+   "id": "us/delaware",
+   "iso": "US",
+   "path": "north-america/us/delaware",
+   "name": "us/delaware"
+  },
+  {
+   "id": "us/district-of-columbia",
+   "iso": "US",
+   "path": "north-america/us/district-of-columbia",
+   "name": "us/district-of-columbia"
+  },
+  {
+   "id": "us/florida",
+   "iso": "US",
+   "path": "north-america/us/florida",
+   "name": "us/florida"
+  },
+  {
+   "id": "us/georgia",
+   "iso": "US",
+   "path": "north-america/us/georgia",
+   "name": "Georgia"
+  },
+  {
+   "id": "us/hawaii",
+   "iso": "US",
+   "path": "north-america/us/hawaii",
+   "name": "us/hawaii"
+  },
+  {
+   "id": "us/idaho",
+   "iso": "US",
+   "path": "north-america/us/idaho",
+   "name": "us/idaho"
+  },
+  {
+   "id": "us/illinois",
+   "iso": "US",
+   "path": "north-america/us/illinois",
+   "name": "us/illinois"
+  },
+  {
+   "id": "us/indiana",
+   "iso": "US",
+   "path": "north-america/us/indiana",
+   "name": "us/indiana"
+  },
+  {
+   "id": "us/iowa",
+   "iso": "US",
+   "path": "north-america/us/iowa",
+   "name": "us/iowa"
+  },
+  {
+   "id": "us/kansas",
+   "iso": "US",
+   "path": "north-america/us/kansas",
+   "name": "us/kansas"
+  },
+  {
+   "id": "us/kentucky",
+   "iso": "US",
+   "path": "north-america/us/kentucky",
+   "name": "us/kentucky"
+  },
+  {
+   "id": "us/louisiana",
+   "iso": "US",
+   "path": "north-america/us/louisiana",
+   "name": "us/louisiana"
+  },
+  {
+   "id": "us/maine",
+   "iso": "US",
+   "path": "north-america/us/maine",
+   "name": "us/maine"
+  },
+  {
+   "id": "us/maryland",
+   "iso": "US",
+   "path": "north-america/us/maryland",
+   "name": "us/maryland"
+  },
+  {
+   "id": "us/massachusetts",
+   "iso": "US",
+   "path": "north-america/us/massachusetts",
+   "name": "us/massachusetts"
+  },
+  {
+   "id": "us/michigan",
+   "iso": "US",
+   "path": "north-america/us/michigan",
+   "name": "us/michigan"
+  },
+  {
+   "id": "us/minnesota",
+   "iso": "US",
+   "path": "north-america/us/minnesota",
+   "name": "us/minnesota"
+  },
+  {
+   "id": "us/mississippi",
+   "iso": "US",
+   "path": "north-america/us/mississippi",
+   "name": "us/mississippi"
+  },
+  {
+   "id": "us/missouri",
+   "iso": "US",
+   "path": "north-america/us/missouri",
+   "name": "us/missouri"
+  },
+  {
+   "id": "us/montana",
+   "iso": "US",
+   "path": "north-america/us/montana",
+   "name": "us/montana"
+  },
+  {
+   "id": "us/nebraska",
+   "iso": "US",
+   "path": "north-america/us/nebraska",
+   "name": "us/nebraska"
+  },
+  {
+   "id": "us/nevada",
+   "iso": "US",
+   "path": "north-america/us/nevada",
+   "name": "us/nevada"
+  },
+  {
+   "id": "us/new-hampshire",
+   "iso": "US",
+   "path": "north-america/us/new-hampshire",
+   "name": "us/new-hampshire"
+  },
+  {
+   "id": "us/new-jersey",
+   "iso": "US",
+   "path": "north-america/us/new-jersey",
+   "name": "us/new-jersey"
+  },
+  {
+   "id": "us/new-mexico",
+   "iso": "US",
+   "path": "north-america/us/new-mexico",
+   "name": "us/new-mexico"
+  },
+  {
+   "id": "us/new-york",
+   "iso": "US",
+   "path": "north-america/us/new-york",
+   "name": "us/new-york"
+  },
+  {
+   "id": "us/north-carolina",
+   "iso": "US",
+   "path": "north-america/us/north-carolina",
+   "name": "us/north-carolina"
+  },
+  {
+   "id": "us/north-dakota",
+   "iso": "US",
+   "path": "north-america/us/north-dakota",
+   "name": "us/north-dakota"
+  },
+  {
+   "id": "us/ohio",
+   "iso": "US",
+   "path": "north-america/us/ohio",
+   "name": "us/ohio"
+  },
+  {
+   "id": "us/oklahoma",
+   "iso": "US",
+   "path": "north-america/us/oklahoma",
+   "name": "us/oklahoma"
+  },
+  {
+   "id": "us/oregon",
+   "iso": "US",
+   "path": "north-america/us/oregon",
+   "name": "us/oregon"
+  },
+  {
+   "id": "us/pennsylvania",
+   "iso": "US",
+   "path": "north-america/us/pennsylvania",
+   "name": "us/pennsylvania"
+  },
+  {
+   "id": "us/puerto-rico",
+   "iso": "US",
+   "path": "north-america/us/puerto-rico",
+   "name": "us/puerto-rico"
+  },
+  {
+   "id": "us/rhode-island",
+   "iso": "US",
+   "path": "north-america/us/rhode-island",
+   "name": "us/rhode-island"
+  },
+  {
+   "id": "us/south-carolina",
+   "iso": "US",
+   "path": "north-america/us/south-carolina",
+   "name": "us/south-carolina"
+  },
+  {
+   "id": "us/south-dakota",
+   "iso": "US",
+   "path": "north-america/us/south-dakota",
+   "name": "us/south-dakota"
+  },
+  {
+   "id": "us/tennessee",
+   "iso": "US",
+   "path": "north-america/us/tennessee",
+   "name": "us/tennessee"
+  },
+  {
+   "id": "us/texas",
+   "iso": "US",
+   "path": "north-america/us/texas",
+   "name": "us/texas"
+  },
+  {
+   "id": "us/us-virgin-islands",
+   "iso": "US",
+   "path": "north-america/us/us-virgin-islands",
+   "name": "us/us-virgin-islands"
+  },
+  {
+   "id": "us/utah",
+   "iso": "US",
+   "path": "north-america/us/utah",
+   "name": "us/utah"
+  },
+  {
+   "id": "us/vermont",
+   "iso": "US",
+   "path": "north-america/us/vermont",
+   "name": "us/vermont"
+  },
+  {
+   "id": "us/virginia",
+   "iso": "US",
+   "path": "north-america/us/virginia",
+   "name": "us/virginia"
+  },
+  {
+   "id": "us/washington",
+   "iso": "US",
+   "path": "north-america/us/washington",
+   "name": "us/washington"
+  },
+  {
+   "id": "us/west-virginia",
+   "iso": "US",
+   "path": "north-america/us/west-virginia",
+   "name": "us/west-virginia"
+  },
+  {
+   "id": "us/wisconsin",
+   "iso": "US",
+   "path": "north-america/us/wisconsin",
+   "name": "us/wisconsin"
+  },
+  {
+   "id": "us/wyoming",
+   "iso": "US",
+   "path": "north-america/us/wyoming",
+   "name": "us/wyoming"
+  },
+  {
+   "id": "uruguay",
+   "iso": "UY",
+   "path": "south-america/uruguay",
+   "name": "Uruguay"
+  },
+  {
+   "id": "uzbekistan",
+   "iso": "UZ",
+   "path": "asia/uzbekistan",
+   "name": "Uzbekistan"
+  },
+  {
+   "id": "venezuela",
+   "iso": "VE",
+   "path": "south-america/venezuela",
+   "name": "Venezuela"
+  },
+  {
+   "id": "vietnam",
+   "iso": "VN",
+   "path": "asia/vietnam",
+   "name": "Vietnam"
+  },
+  {
+   "id": "american-oceania",
+   "iso": "VU",
+   "path": "australia-oceania/american-oceania",
+   "name": "American Oceania"
+  },
+  {
+   "id": "ile-de-clipperton",
+   "iso": "VU",
+   "path": "australia-oceania/ile-de-clipperton",
+   "name": "\u00cele de Clipperton"
+  },
+  {
+   "id": "polynesie-francaise",
+   "iso": "VU",
+   "path": "australia-oceania/polynesie-francaise",
+   "name": "Polyn\u00e9sie fran\u00e7aise (French Polynesia)"
+  },
+  {
+   "id": "tokelau",
+   "iso": "VU",
+   "path": "australia-oceania/tokelau",
+   "name": "Tokelau"
+  },
+  {
+   "id": "vanuatu",
+   "iso": "VU",
+   "path": "australia-oceania/vanuatu",
+   "name": "Vanuatu"
+  },
+  {
+   "id": "wallis-et-futuna",
+   "iso": "VU",
+   "path": "australia-oceania/wallis-et-futuna",
+   "name": "Wallis et Futuna"
+  },
+  {
+   "id": "samoa",
+   "iso": "WS",
+   "path": "australia-oceania/samoa",
+   "name": "Samoa"
+  },
+  {
+   "id": "yemen",
+   "iso": "YE",
+   "path": "asia/yemen",
+   "name": "Yemen"
+  },
+  {
+   "id": "south-africa",
+   "iso": "ZA",
+   "path": "africa/south-africa",
+   "name": "South Africa"
+  },
+  {
+   "id": "zambia",
+   "iso": "ZM",
+   "path": "africa/zambia",
+   "name": "Zambia"
+  },
+  {
+   "id": "zimbabwe",
+   "iso": "ZW",
+   "path": "africa/zimbabwe",
+   "name": "Zimbabwe"
+  }
+ ]
+}
