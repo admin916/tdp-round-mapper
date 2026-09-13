@@ -54,6 +54,13 @@ test('nine observed holes alone are not full coverage',()=>{
   assert.equal(qualityOf({...b.coverage,expectedHoles:9}),'full');
   assert.equal(qualityOf({...b.coverage,expectedHoles:18}),'partial');
 });
+test('eighteen consecutive mapped holes establish an 18-hole layout without an outline tag',()=>{
+  const data=fixture(18);delete data[0].tags.holes;
+  const b=buildCourseData('Test','',data,null,{expectedHoles:null,minHoles:1});
+  assert.equal(b.coverage.expectedHoles,18);assert.equal(qualityOf(b.coverage),'full');
+  const nine=fixture();delete nine[0].tags.holes;
+  assert.equal(buildCourseData('Test','',nine,null,{expectedHoles:null,minHoles:1}).coverage.expectedHoles,null);
+});
 test('legacy catalogue corruption is rejected on load',()=>{
   const b=buildCourseData('Test','',fixture(),null);
   b.holes[1].osmRef=1;

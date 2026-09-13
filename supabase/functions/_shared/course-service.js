@@ -5,11 +5,13 @@ export async function courseSource(input,fetcher=fetch) {
   for(const url of OVERPASS_MIRRORS.slice(0,3)) {
     try {
       const r=await fetcher(url,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded','user-agent':'TDP-course-builder/1.0 (admin@v3tr4.com)'},
-        body:'data='+encodeURIComponent(queryForCandidate(candidate)),signal:AbortSignal.timeout(45000)});
+        body:'data='+encodeURIComponent(queryForCandidate(candidate)),signal:AbortSignal.timeout(20000)});
       if(!r.ok) continue;
       const data=await r.json();
       if(!Array.isArray(data.elements)||data.remark) continue;
-      const selected=selectCourseElements(data.elements,candidate);
+      let selected;
+      try { selected=selectCourseElements(data.elements,candidate); }
+      catch(e) { if(e.layouts) e.rawElements=data.elements; throw e; }
       return {...selected,candidate,outline:data.elements.find(e=>e.id===candidate.osmId && e.type===candidate.osmType)};
     } catch(e) {if(e.layouts || !/fetch|abort|timeout|timed out|network|json/i.test(e.message)) throw e;}
   }

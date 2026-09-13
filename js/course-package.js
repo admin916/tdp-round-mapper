@@ -26,9 +26,11 @@ globalThis.TDPCoursePackage=(()=>{
       provenance:{source:'',sourceUrl:'',permission:'',imageryDate:'',notes:''},featureReview:{}};
   }
   function fromMap(data) {
-    const draft=empty(data.identity||{id:data.course.id,name:data.course.name,lat:data.course.lat,lon:data.course.lon});
-    draft.course={...clone(data.course),expectedHoles:data.coverage?.expectedHoles||null,teeSets:clone(data.course.teeSets||[])};
+    const draft=empty(data.identity||{id:data.course.id||data.course.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''),name:data.course.name,lat:data.course.lat,lon:data.course.lon});
+    draft.course={...draft.course,...clone(data.course),expectedHoles:data.coverage?.expectedHoles||null,teeSets:clone(data.course.teeSets||[])};
     draft.provenance={...draft.provenance,...clone(data.provenance||{})};
+    draft.provenance.permission ||= data.provenance?.license || '';
+    draft.featureReview=clone(data.coverage?.features||{});
     for(const h of data.holes||[]) {
       draft.features.push({id:h.id||`hole-${h.num}`,type:'hole',hole:h.num,par:h.parSource==='estimate'?null:h.par,si:h.si,geometry:{type:'LineString',coordinates:h.line.map(xy)}});
       draft.features.push({id:`green-${h.num}`,type:'green',hole:h.num,geometry:h.green.polygons?{type:'MultiPolygon',coordinates:h.green.polygons.map(p=>p.map(r=>r.map(xy)))}:polygon(h.green.poly)});
@@ -84,8 +86,9 @@ globalThis.TDPCoursePackage=(()=>{
     }
     return d;
   }
-  function assemble(d) {
-    validate(d,{publish:true});
+  function assemble(d,{publish=true}={}) {
+    validate(d,{publish});
+    if(!d.features.some(f=>f.type==='hole'))throw new Error('Add a numbered hole route and green before opening this map.');
     const overlays=Object.fromEntries(['fairway','green','bunker','water','penalty','woodland','rough','tee','boundary'].map(k=>[k,[]]));
     for(const f of d.features)if(overlays[f.type])for(const p of polygons(f.geometry))overlays[f.type].push(p.map(r=>r.map(latlng)));
     const holes=d.features.filter(f=>f.type==='hole').sort((a,b)=>a.hole-b.hole).map(f=>{
@@ -106,7 +109,7 @@ globalThis.TDPCoursePackage=(()=>{
     const refs=holes.map(h=>h.num),full=holes.length===Number(d.course.expectedHoles)&&refs.every((n,i)=>n===i+1);
     return {course:{...clone(d.course),par:holes.reduce((s,h)=>s+h.par,0),slope:d.course.slope||null,rating:d.course.rating||null},holes,overlays,
       identity:clone(d.identity),quality:full?'full':'partial',coverage:{validationVersion:2,expectedHoles:Number(d.course.expectedHoles),holesMapped:holes.length,holesBuilt:holes.length,holeRefs:refs,
-        features:clone(d.featureReview||{}),ratingSource:d.course.slope&&d.course.rating?'reviewed':'unknown'},provenance:{...clone(d.provenance),reviewStatus:'pending'}};
+        features:clone(d.featureReview||{}),ratingSource:d.course.slope&&d.course.rating?'reviewed':'unknown'},provenance:{...clone(d.provenance),reviewStatus:publish?'pending':'local'}};
   }
   return {types,empty,fromMap,fromSource,validate,assemble,geometryError};
 })();

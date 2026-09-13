@@ -51,7 +51,7 @@
     // device-built OSM course the catalogue hasn't seen — contribute it
     let geometry = null;
     try { geometry = JSON.parse(localStorage.getItem("tdp.course.data." + snap.courseId)); } catch {}
-    if (!geometry) return false;
+    if (!geometry || geometry.mapStatus === "local") return false;
     const { error } = await supa.from("courses").upsert({
       id: snap.courseId, name: snap.courseMeta.name, location: snap.courseMeta.location,
       geometry, source: "osm", created_by: uid(),
@@ -250,10 +250,18 @@
   };
 
   /* ── course catalogue API (Course Finder tier 1) ────────────────── */
+  /* Columns added by the course-packages migration. If the catalogue predates it (42703 =
+     undefined column) the query is retried without them rather than failing the whole finder. */
+  const PACKAGE_COLUMNS = ["map_status", "current_revision", "course_uuid"];
+  async function selectCourses(columns, build) {
+    let result = await build(columns);
+    if (result.error?.code === "42703") result = await build(columns.filter((c) => !PACKAGE_COLUMNS.includes(c)));
+    return result;
+  }
   async function searchCatalogue(q, signal) {
     if (!navigator.onLine) return [];
-    const { data, error } = await supa.from("courses")
-      .select("id,name,location,source,country,quality,coverage,map_status").ilike("name", `%${q}%`).limit(20).abortSignal(signal || AbortSignal.timeout(12000));
+    const { data, error } = await selectCourses(["id","name","location","source","country","quality","coverage","map_status"], (cols) => supa.from("courses")
+      .select(cols.join(",")).ilike("name", `%${q}%`).limit(20).abortSignal(signal || AbortSignal.timeout(12000)));
     if (error) throw new Error('The course library is temporarily unavailable.');
     return data || [];
   }
@@ -304,7 +312,7 @@
     if (error && error.code !== '23505') throw new Error(error.code==='P0001'?error.message:"Mapping request could not be submitted. Please try again.");
   }
   async function getCatalogueCourse(id) {
-    const { data, error } = await supa.from("courses").select("geometry,current_revision,course_uuid,map_status").eq("id", id).maybeSingle();
+    const { data, error } = await selectCourses(["geometry","current_revision","course_uuid","map_status"], (cols) => supa.from("courses").select(cols.join(",")).eq("id", id).maybeSingle());
     if (error || !data) return null;
     return {...data.geometry,mapStatus:data.map_status,course:{...data.geometry.course,id,revisionId:data.current_revision,uuid:data.course_uuid}};
   }

@@ -50,19 +50,11 @@
 
   let layer = null, on = false;
 
-  function distToSegM(p, a, b) { // rough planar distance point→segment in metres
-    const kLat = 111132, kLon = 111320 * Math.cos((p[0] * Math.PI) / 180);
-    const P = [(p[1] - a[1]) * kLon, (p[0] - a[0]) * kLat];
-    const B = [(b[1] - a[1]) * kLon, (b[0] - a[0]) * kLat];
-    const L2 = B[0] * B[0] + B[1] * B[1];
-    const t = L2 ? Math.min(1, Math.max(0, (P[0] * B[0] + P[1] * B[1]) / L2)) : 0;
-    return Math.hypot(P[0] - t * B[0], P[1] - t * B[1]);
-  }
-
   function render() {
     clear();
     const hole = T.hole();
     const pin = T.pinLatLng(hole);
+    const area = window.TDPHoleSpatial.forHole(T.geometry(), hole);
     const sg = window.TDPModel?.get()?.sg_by_lie || null;
 
     /* bbox: hole line + green, padded 55m */
@@ -81,17 +73,14 @@
     cv.width = cols; cv.height = rows;
     const ctx = cv.getContext("2d");
 
-    const segs = hole.line.slice(0, -1).map((p, i) => [p, hole.line[i + 1]]);
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const lat = maxLat - ((r + 0.5) / rows) * (maxLat - minLat);
         const lng = minLng + ((c + 0.5) / cols) * (maxLng - minLng);
         const p = [lat, lng];
-        /* keep to the playing corridor: near the line or near the green */
-        const nearLine = segs.some(([a, b]) => distToSegM(p, a, b) < 60);
-        if (!nearLine && T.distM(p, pin) > 45) continue;
-        let lie = T.detectLie(p);
-        if (lie === "green" && T.distM(p, hole.green.centre) > 45) lie = "fairway";   // another hole's green
+        if (!area.contains(p)) continue;
+        let lie = area.lie(p);
+        if (lie === 'woodland') lie = 'penalty';
         if (lie === "penalty") { ctx.fillStyle = "hsla(215, 70%, 45%, 0.55)"; ctx.fillRect(c, r, 1, 1); continue; }
         const e = expectedStrokes(lie, T.distM(p, pin), sg);
         ctx.fillStyle = colour(e);
@@ -106,12 +95,13 @@
 
   function clear() { if (layer) { layer.remove(); layer = null; } }
 
-  window.TDPHeat = { expectedStrokes };
+  window.TDPHeat = { expectedStrokes, contains: p => window.TDPHoleSpatial.forHole(T.geometry(), T.hole()).contains(p) };
 
   $("btnHeat").onclick = () => {
     on = !on;
     $("btnHeat").classList.toggle("on", on);
     if (on) {
+      T.focusHole();
       render();
       const m = window.TDPModel?.get();
       const personalised = m?.clubs && Object.keys(m.clubs).length;
@@ -121,6 +111,7 @@
         : "Heat map: expected strokes to hole out (scratch baseline — play more rounds to personalise).";
       setTimeout(() => ($("mapHint").style.opacity = "0"), 6000);
     } else clear();
+    $("btnHeat").setAttribute("aria-pressed", String(on));
   };
   window.addEventListener("tdp-hole", () => { if (on) render(); });
 })();

@@ -11,7 +11,7 @@ export async function apple(path,method='GET',data) {
   const input=b({alg:'ES256',kid:keyId,typ:'JWT'})+'.'+b({iss:issuer,iat:now,exp:now+600,aud:'appstoreconnect-v1'});
   const signature=createSign('SHA256').update(input).sign({key:readFileSync(keyPath),dsaEncoding:'ieee-p1363'}).toString('base64url');
   const r=await fetch('https://api.appstoreconnect.apple.com'+path,{method,headers:{authorization:`Bearer ${input}.${signature}`,'content-type':'application/json'},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(30000)});
-  const result=await r.json();if(!r.ok)throw new Error(`Apple ${r.status}: ${result.errors?.map(e=>e.detail).join('; ')}`);return result;
+  const result=r.status===204?null:await r.json();if(!r.ok)throw new Error(`Apple ${r.status}: ${result.errors?.map(e=>e.detail).join('; ')}`);return result;
 }
 const cmd=process.argv[2],appId='6790933467';
 if(cmd==='inspect') {

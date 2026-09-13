@@ -54,63 +54,86 @@
   }
 
   /* expected strokes from a landing point — memoised lie lookups on a 3 m grid */
-  let lieCache = new Map(), greenCentre = null;
-  /* a green that isn't THIS hole's green is somebody else's putting surface —
-     you can't putt from there, so treat it as short grass (fairway) */
-  function lieAt(p) {
-    const k = ((p[0] * 37000) | 0) + "," + ((p[1] * 37000) | 0);
-    let v = lieCache.get(k);
-    if (!v) { v = T.detectLie(p); if (v === "green" && greenCentre && T.distM(p, greenCentre) > 45) v = "fairway"; lieCache.set(k, v); }
-    return v;
-  }
-  const BAD = new Set(["penalty", "bunker", "rough"]);
+  let area = null, lieCache = new Map();
+  const lieAt = p => {
+    const key = Math.round(p[0] * 37000) + ',' + Math.round(p[1] * 37000);
+    if (!lieCache.has(key)) lieCache.set(key, area.lie(p));
+    return lieCache.get(key);
+  };
+  const BAD = new Set(['outside', 'woodland', 'penalty', 'bunker', 'rough']);
 
-  function scoreOption(origin, b, cm, pin, sg) {
+  function scoreOption(origin, b, cm, pin, sg, allow) {
     const terr = window.TDPTerrain;
     let carry = cm.carry;
     if (terr?.elev) {   // one-step elevation correction: uphill plays longer, downhill shorter
       const dz = terr.elev(project(origin, b, carry)) - terr.elev(origin);
       if (isFinite(dz)) carry -= dz * 0.9;
     }
+    const aim = project(origin, b, carry);
+    if (!allow(aim) || area.progress(aim) < area.progress(origin) + 10) return null;
     let e = 0, risk = 0, fair = 0;
     const ux = b, side = (b + 90) % 360;
     for (const [zl, wl] of Q) for (const [zs, ws] of Q) {
       const w = (wl * ws) / (QW * QW);
       const p = project(project(origin, ux, carry + zl * cm.sdLong), side, zs * cm.sdLat);
       const lie = lieAt(p);
-      e += w * window.TDPHeat.expectedStrokes(lie, T.distM(p, pin), sg);
+      e += w * (window.TDPHeat.expectedStrokes(['outside', 'woodland'].includes(lie) ? 'rough' : lie, T.distM(p, pin), sg) + (lie === 'outside' ? 2 : lie === 'woodland' ? 1 : 0));
       if (BAD.has(lie)) risk += w;
       if (lie === "fairway" || lie === "green" || lie === "fringe" || lie === "tee") fair += w;
     }
-    return { club: cm.club, bearing: b, carry, sdLong: cm.sdLong, sdLat: cm.sdLat, expected: 1 + e, risk, fair, personal: cm.personal, aim: project(origin, b, carry) };
+    return { club: cm.club, bearing: b, carry, sdLong: cm.sdLong, sdLat: cm.sdLat, expected: 1 + e, risk, fair, personal: cm.personal, aim };
   }
 
   function plan() {
     const hole = T.hole(), st = T.state(), pin = T.pinLatLng(hole);
     const wps = st.waypoints || [];
     if (!wps.length) return null;
-    /* ball position: the last plotted point once the hole is being played, else the tee */
-    const origin = st.touched ? wps[wps.length - 1] : wps[0];
-    const lie = origin === wps[0] ? "tee" : T.detectLie(origin);
+    const shotIndex = Math.max(0, Math.min(T.selectedShot(), wps.length - 1));
+    const origin = wps[shotIndex];
+    area = window.TDPHoleSpatial.forHole(T.geometry(), hole);lieCache.clear();
+    if (!area.contains(origin)) return {message: 'The selected shot is outside this hole. Move its ball marker onto the hole to plan your shot.'};
+    const lie = shotIndex === 0 ? 'tee' : area.lie(origin);
     const toPin = T.distM(origin, pin);
-    if (lie === "green" || toPin < 25) return { onGreen: true, origin, toPin };
+    if (lie === "green") return { onGreen: true, origin, toPin };
     const sg = window.TDPModel?.get()?.sg_by_lie || null;
     const b0 = bearing(origin, pin);
     const clubs = Object.keys(DEFAULT_CARRY).filter((c) => lie !== "bunker" || !["Dr", "3W", "5W", "7W"].includes(c));
     const opts = [];
-    lieCache = new Map(); greenCentre = hole.green.centre;
-    for (const club of clubs) {
-      const cm = clubModel(club, lie);
-      if (cm.carry > toPin + 20) continue;             // through the green
-      if (cm.carry < 45 && toPin > 120) continue;      // pointless chips from range
-      for (let d = -40; d <= 40; d += 2.5) opts.push(scoreOption(origin, (b0 + d + 360) % 360, cm, pin, sg));
+    const directions = new Set();
+    // Follow the routing through doglegs instead of aiming only towards the pin.
+    for (let i = 1; i < hole.line.length; i++) {
+      const a = hole.line[i - 1], b = hole.line[i], steps = Math.max(1, Math.ceil(T.distM(a, b) / 15));
+      for (let j = 0; j <= steps; j++) {
+        const p = [a[0] + (b[0] - a[0]) * j / steps, a[1] + (b[1] - a[1]) * j / steps];
+        if (area.progress(p) < area.progress(origin) + 15) continue;
+        for (const offset of [-10, -5, 0, 5, 10]) directions.add(Math.round((bearing(origin, p) + offset + 360) % 360));
+      }
     }
-    if (!opts.length) return null;
+    directions.add(Math.round(b0));
+    /* Landing targets: short grass first. Forward tee boxes are never a target, and unmapped
+       ground on a hole with no fairway polygons is treated as playable (see hole-spatial.js).
+       If nothing short-grass is reachable (a fairway that only starts beyond driver range),
+       fall back to any playable ground on this hole rather than suggesting a lay-up to a tee box. */
+    const shortGrass = new Set(['fairway', 'green', 'firstcut']), playable = new Set([...shortGrass, 'rough', 'tee']);
+    const passes = [p => area.contains(p) && shortGrass.has(lieAt(p)), p => area.contains(p) && playable.has(lieAt(p))];
+    for (const allow of passes) {
+      for (const club of clubs) {
+        const cm = clubModel(club, lie);
+        if (cm.carry > Math.max(toPin, hole.metres - area.progress(origin)) + 20) continue;             // through the green
+        if (cm.carry < 45 && toPin > 120) continue;      // pointless chips from range
+        for (const direction of directions) {
+          const option = scoreOption(origin, direction, cm, pin, sg, allow);
+          if (option) opts.push(option);
+        }
+      }
+      if (opts.length) break;
+    }
+    if (!opts.length) return {message: 'No landing area on this hole is reachable with these club distances. Check the ball position, or map this hole\'s fairway in the course editor.'};
     opts.sort((a, b) => a.expected - b.expected);
     const best = opts[0];
     const near = opts.filter((o) => o.expected - best.expected < 0.15 && o.club !== best.club || (o.club === best.club && Math.abs(o.bearing - best.bearing) > 6) && o.expected - best.expected < 0.15);
     const safe = near.sort((a, b) => a.risk - b.risk)[0];
-    return { origin, lie, toPin, pinBearing: b0, best, safe: safe && safe.risk < best.risk - 0.08 ? safe : null, options: opts.length };
+    return { origin, lie, toPin, pinBearing: b0, best, safe: safe && safe.risk < best.risk - 0.08 ? safe : null, options: opts.length, unmapped: !area.hasFairways };
   }
 
   /* ── drawing ──────────────────────────────────────────────────────── */
@@ -128,29 +151,32 @@
     const map = T.leaflet();
     objs.push(L.polygon(ellipse(o, 2), { color: colour, weight: 1, opacity: 0.55, fillOpacity: 0.08, dashArray: "3 5", interactive: false }).addTo(map));
     objs.push(L.polygon(ellipse(o, 1), { color: colour, weight: 2, opacity: 0.9, fillOpacity: 0.22, interactive: false }).addTo(map));
-    objs.push(L.marker(o.aim, { interactive: false, icon: L.divIcon({ className: "aim-label", html: `<div class="aim-pill ${tag === "Safe" ? "above" : ""}" style="--c:${colour}"><b>${tag} ${o.club}</b> ${unitStr(o.carry)} · E ${o.expected.toFixed(2)} · ${Math.round(o.fair * 100)}% fairway · ${Math.round(o.risk * 100)}% trouble</div>`, iconSize: [0, 0] }) }).addTo(map));
+    objs.push(L.marker(o.aim, { interactive: false, icon: L.divIcon({ className: "aim-label", html: `<div class="aim-pill ${tag === "Safe" ? "above" : ""}" style="--c:${colour}"><b>${tag} ${o.club}</b> ${unitStr(o.carry)}</div>`, iconSize: [0, 0] }) }).addTo(map));
   }
   function render() {
     clear();
     const p = plan();
-    const hint = $("mapHint");
-    if (!p) return;
+    const hint = $("strategyStatus");
+    hint.classList.remove("hidden");
+    if (!p) { hint.textContent = "Select a shot to see its aim target."; return; }
+    if (p.message) { hint.textContent = p.message; return; }
     if (p.onGreen) { hint.textContent = "Aim: you're on the green — putt."; hint.style.opacity = "0.85"; return; }
     objs.push(L.polyline([p.origin, p.best.aim], { color: "#23c68b", weight: 2, opacity: 0.8, dashArray: "2 6", interactive: false }).addTo(T.leaflet()));
     if (p.safe) draw(p.safe, "#f5b942", "Safe");
     draw(p.best, "#23c68b", "Aim");
     const off = ((p.best.bearing - p.pinBearing + 540) % 360) - 180;
     const dir = Math.abs(off) < 2 ? "at the pin" : `${Math.abs(off).toFixed(0)}° ${off < 0 ? "left" : "right"} of the pin`;
-    hint.innerHTML = `<b>Aim:</b> ${p.best.club} ${unitStr(p.best.carry)} ${dir} · expected ${p.best.expected.toFixed(2)} from here` +
-      (p.safe ? ` · <span style="color:#f5b942">safe: ${p.safe.club} ${unitStr(p.safe.carry)} (+${(p.safe.expected - p.best.expected).toFixed(2)}, ${Math.round(p.safe.risk * 100)}% trouble)</span>` : "") +
-      (p.best.personal ? "" : " · <i>scratch-ish defaults — play more rounds to personalise</i>");
+    hint.textContent = `Hole ${T.hole().num} · Shot ${T.selectedShot() + 1}: ${p.best.club}, ${unitStr(p.best.carry)}, ${dir}.` +
+      (p.best.personal ? ' Based on your recorded distances.' : ' Estimated club distances — adjust for your own carry and conditions.') +
+      (p.unmapped ? ' Fairways are not mapped on this hole, so the target follows the hole route.' : '');
     hint.style.opacity = "0.9";
   }
 
   $("btnTarget").onclick = () => {
     on = !on;
     $("btnTarget").classList.toggle("on", on);
-    if (on) render(); else { clear(); $("mapHint").style.opacity = "0"; }
+    $("btnTarget").setAttribute("aria-pressed", String(on));
+    if (on) { T.focusHole(); render(); } else { clear(); $("strategyStatus").classList.add("hidden"); }
   };
   window.addEventListener("tdp-hole", () => { if (on) render(); });
   window.TDPTarget = { plan, refresh: () => { if (on) render(); }, onChange: () => { if (on) render(); }, isOn: () => on };

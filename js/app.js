@@ -23,8 +23,9 @@ function registerCourse(c) {
   const id = c.course.id || slug(c.course.name);
   c.course.id = id;
   try { localStorage.setItem("tdp.course.data." + id, JSON.stringify(c)); } catch { throw new Error('Device storage is full. Free some space before saving this map.'); }
-  const idx = courseIndex();
-  if (!idx.find((e) => e.id === id)) { idx.push({ id, name: c.course.name, location: c.course.location || "" }); localStorage.setItem("tdp.course.index", JSON.stringify(idx)); }
+  const idx = courseIndex().filter(e => e.id !== id);
+  idx.unshift({ id, name: c.course.name, location: c.course.location || "", holes: c.holes.length });
+  try { localStorage.setItem("tdp.course.index", JSON.stringify(idx)); } catch { throw new Error("Could not save this course to your maps. Free some device storage and try again."); }
   return id;
 }
 function activeCourse() {
@@ -38,6 +39,7 @@ function activeCourse() {
 }
 function switchCourse(id, pendingCard) {
   localStorage.setItem("tdp.course.active.id", id);
+  sessionStorage.setItem("tdp.course.openOverview", "1");
   if (pendingCard) try { localStorage.setItem("tdp.pending.card", JSON.stringify(pendingCard)); } catch {}
   location.reload();
 }
@@ -486,6 +488,20 @@ const OVERLAY_STYLE = {
     L.polygon(poly, { ...OVERLAY_STYLE[k], renderer: canvas, interactive: false }).addTo(map));
 });
 
+const courseHoleLayer = L.layerGroup().addTo(map);
+COURSE.holes.forEach(h => {
+  L.polyline(h.line, {color: '#a8e6be', weight: 2, opacity: 0.7, interactive: false}).addTo(courseHoleLayer);
+  L.polygon(h.green.polygons || h.green.poly, {...OVERLAY_STYLE.green, interactive: false}).addTo(courseHoleLayer);
+  L.marker(h.tee, {icon: L.divIcon({className: 'course-hole-marker', html: `<span>${h.num}</span>`, iconSize: [26, 26], iconAnchor: [13, 13]}),
+    title: `Open hole ${h.num}`, keyboard: true}).on('click', () => gotoHole(h.num)).addTo(courseHoleLayer);
+});
+const featureCount = type => COURSE.overlays?.[type]?.length || 0;
+const expectedHoles = COURSE.coverage?.expectedHoles;
+const coverageText = `${COURSE.holes.length}${expectedHoles ? '/' + expectedHoles : ''} holes mapped · ` +
+  `${featureCount('fairway') ? featureCount('fairway') + ' fairways' : 'Fairways not mapped'} · ` +
+  `${featureCount('bunker') ? featureCount('bunker') + ' bunkers' : 'Bunkers not mapped'}`;
+document.getElementById('mapCoverage').innerHTML = `<strong>${esc(COURSE.course.name)}</strong>${esc(coverageText)}`;
+
 let mapObjs = []; // per-hole leaflet objects
 function clearHoleLayer() { mapObjs.forEach((o) => map.removeLayer(o)); mapObjs = []; }
 
@@ -538,7 +554,7 @@ function drawHole(fit) {
 
   if (fit) {
     const b = L.latLngBounds(hole.line.concat(hole.green.poly));
-    map.flyToBounds(b, { paddingTopLeft: [90, 100], paddingBottomRight: [90, 70], duration: 0.8 });
+    map.flyToBounds(b, { paddingTopLeft: [90, 100], paddingBottomRight: window.matchMedia("(max-width: 900px)").matches ? [55, 235] : [90, 70], duration: 0.8 });
   }
   window.TDPTarget?.onChange?.();
 }
@@ -771,6 +787,9 @@ window.TDPMap = {
   leaflet: () => map,
   hole: () => H(),
   state: () => S(),
+  selectedShot: () => selShot,
+  geometry: () => COURSE,
+  focusHole: () => drawHole(true),
   detectLie, distM, pinLatLng,
   M2YD,
   courseId: () => COURSE_ID,
@@ -1237,7 +1256,8 @@ function fitCourse() {
     h.green.poly.forEach((p) => b.extend(p));
     b.extend(h.tee);
   });
-  map.flyToBounds(b, { padding: [36, 36], duration: 0.7 });
+  const mobile = window.matchMedia("(max-width: 900px)").matches;
+  map.flyToBounds(b, { paddingTopLeft: mobile ? [36, 120] : [36, 80], paddingBottomRight: mobile ? [36, 230] : [36, 85], duration: 0.7 });
 }
 
 /* ═══════════════ EVENTS ═══════════════ */
@@ -1299,9 +1319,12 @@ $("btnReset").onclick = () => {
   loadWeather();
 };
 document.addEventListener("keydown", (e) => {
-  if (e.target.tagName === "INPUT") return;
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) return;
+  if (document.getElementById("courseEditor")) { if (e.key === "Escape") document.getElementById("edClose").click(); return; }
   if (e.key === "ArrowRight" || e.key === "n") gotoNext();
   if (e.key === "ArrowLeft" || e.key === "p") gotoPrev();
+  if (e.key === "Escape" && document.getElementById("courseEditor")) { document.getElementById("edClose").click(); return; }
+  if (document.getElementById("courseEditor")) return;
   if (e.key === "Escape") ["summaryModal", "cardModal", "importModal", "lightbox", "courseModal", "chatModal"].forEach((id) => $(id).classList.add("hidden"));
 });
 setTimeout(() => { const h = $("mapHint"); h.style.transition = "opacity 1s"; h.style.opacity = "0"; }, 8000);
@@ -1397,7 +1420,7 @@ $("chatModel").addEventListener("change", (e) => { CHAT.model = e.target.value.t
 /* every playable course = built-ins + on-demand courses cached in the registry */
 function allCourses() {
   const list = BUILTINS.map((c) => ({ id: slug(c.course.name), name: c.course.name, loc: c.course.location || "", holes: c.holes.length }));
-  courseIndex().forEach((e) => { if (!list.find((c) => c.id === e.id)) list.push({ id: e.id, name: e.name, loc: e.location, built: true }); });
+  courseIndex().forEach((e) => { if (!list.find((c) => c.id === e.id)) list.push({ id: e.id, name: e.name, loc: e.location, holes: e.holes || courseById(e.id)?.holes.length, built: true }); });
   return list;
 }
 /* Built-in, hand-mapped tour courses shown as "Featured" at the top of the finder. */
@@ -1406,29 +1429,35 @@ function courseCard(c) {
   const loaded = c.id === COURSE_ID;
   const featured = FEATURED_IDS.includes(c.id);
   return `
-    <div class="course-item" data-id="${esc(c.id)}">
+    <button class="course-item" data-id="${esc(c.id)}">
       <div class="ci-main">
         <div class="ci-name">${esc(c.name)}
           ${featured ? '<span class="ci-tour">TOUR</span>' : ""}
-          <span class="ci-live">${loaded ? "LOADED" : "PLAYABLE"}</span>
+          <span class="ci-live">${loaded ? "OPEN" : "SAVED MAP"}</span>
         </div>
         <div class="ci-loc">${esc(c.loc || "")}${c.holes ? " · " + c.holes + " holes mapped" : ""}</div>
       </div>
-      <div class="ci-go">${loaded ? "✓" : "›"}</div>
-    </div>`;
+      <div class="ci-go">${loaded ? "View map →" : "Open map →"}</div>
+    </button>`;
 }
 /* Course discovery is independent of whether hole geometry exists. */
 let discoverSeq = 0, discoverTimer = null, discoverAbort = null, previewMap = null;
 function savedPlaces() { try { return JSON.parse(localStorage.getItem("tdp.course.places") || "[]"); } catch { return []; } }
 function savePlace(c) {
-  const rows = savedPlaces().filter(x => CF.placeKey(x) !== CF.placeKey(c));
+  const rows = savedPlaces().filter(x => CF.placeKey(x) !== CF.placeKey(c) && !(c.layout && x.id === c.id && !x.layout));
   localStorage.setItem("tdp.course.places", JSON.stringify([c, ...rows].slice(0, 100)));
+}
+function hasSavedMap(c) {
+  return allCourses().some(m => {
+    const identity = courseById(m.id)?.identity;
+    return identity ? CF.placeKey(identity) === CF.placeKey(c) : !c.layout && m.id === c.id;
+  });
 }
 function remoteCard(c, kind) {
   return `<button class="course-item remote-item" data-kind="${kind}" data-id="${esc(c.id)}" data-layout="${esc(c.layout || '')}" style="width:100%;text-align:left">
     <span class="ci-main"><span class="ci-name" style="display:block">${esc(c.name)}${c.layout ? ' — ' + esc(c.layout) : ''}</span>
     <span class="ci-loc" style="display:block">${esc(c.loc || c.location || "")}</span>
-    <span class="ci-src ${kind}">${kind === "lib" ? "TDP LIBRARY" : "COURSE FOUND · PREVIEW"}</span></span><span class="ci-go">›</span></button>`;
+    <span class="ci-src ${kind}">${kind === "lib" ? "TDP LIBRARY" : "CHECK MAP AVAILABILITY"}</span></span><span class="ci-go">${kind === "lib" ? "Save & open →" : "View course →"}</span></button>`;
 }
 function showPlace(c) {
   window.TDPCourseEditor?.close();
@@ -1437,16 +1466,15 @@ function showPlace(c) {
   const list = $("courseList");
   list.innerHTML = `<h2>${esc(c.name)}${c.layout ? ' — ' + esc(c.layout) : ''}</h2><p>${esc(c.loc || c.location || "")}</p>
     <div id="coursePreview" style="height:240px;border-radius:12px"></div>
-    <p>Course location found. Hole and hazard coverage will be checked when you load the map.</p>
-    <div class="auth-actions"><button class="btn primary" id="loadPlace">Check and load course map</button>
-    <button class="btn" id="savePlace">Save course</button><button class="btn" id="editPlace">Map or correct course</button><button class="btn ghost" id="backPlaces">Back to results</button></div>
+    <p>Open this course on the main map with its available holes, fairways, greens and bunkers. The map will be saved on this device for next time.</p>
+    <div class="auth-actions"><button class="btn primary" id="loadPlace">Save &amp; open course map</button>
+    <button class="btn" id="editPlace">Add missing map details</button><button class="btn ghost" id="backPlaces">Back to results</button></div>
     <p id="placeStatus" role="status"></p>
     <div id="requestProgress" role="status"></div>`;
   previewMap = L.map("coursePreview").setView([c.lat,c.lon],15);
   L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     {attribution:"Imagery © Esri, Maxar, Earthstar Geographics · Course location © OpenStreetMap contributors"}).addTo(previewMap);
   L.marker([c.lat,c.lon]).addTo(previewMap);
-  $("savePlace").onclick = () => { savePlace(c); $("placeStatus").textContent = "Saved. You can find this course here even before its holes are mapped."; };
   $("backPlaces").onclick = () => renderCourseList($("courseSearch").value);
   $("loadPlace").onclick = () => buildAndLoad(c);
   $('editPlace').onclick=()=>{previewMap?.remove();previewMap=null;window.TDPCourseEditor.open({candidate:c,container:list,onClose:()=>showPlace(c)});};
@@ -1464,7 +1492,7 @@ async function refreshRequestProgress(candidate) {
     if (!current()) return;
     panel.textContent = CF.requestMessage(request);
     if (request?.status === 'done' && request.course_id) {
-      const load = document.createElement('button'); load.className = 'btn primary'; load.textContent = 'Load completed map';
+      const load = document.createElement('button'); load.className = 'btn primary'; load.textContent = 'Save & open completed map';
       load.onclick = () => loadFromCatalogue(request.course_id); panel.appendChild(load);
     }
     if (request?.status === 'failed' || (request?.status === 'done' && !request.course_id)) {
@@ -1496,15 +1524,20 @@ async function discover(q, seq) {
   const lib = tasks[0].status === "fulfilled" ? tasks[0].value : [];
   const places = tasks[1].status === "fulfilled" ? tasks[1].value : [];
   const localIds = new Set(allCourses().map(c => c.id));
-  const rows = lib.filter(c => !localIds.has(c.id) && (!finder.country || c.country === finder.country) && (!finder.full || (c.quality === "full" && c.coverage?.validationVersion === 2)) && (!finder.tour || c.coverage?.tours?.length));
-  const shown = places.filter(c => !finder.full && !finder.tour && !rows.some(r => r.id === c.id) && (!finder.country || c.country === finder.country));
-  if (finder.near) shown.sort((a,b) => distM(finder.near,[a.lat,a.lon])-distM(finder.near,[b.lat,b.lon]));
+  /* Library rows are only offered when they passed hole validation (validationVersion 2) or were
+     reviewed/contributed by people. Legacy bulk imports mix neighbouring layouts (Augusta's row
+     numbered its holes 1,1,2,2,2…) and would only fail on load, so they are left to the direct
+     OpenStreetMap download below, which builds the exact selected club in a few seconds. */
+  const trusted = c => c.coverage?.validationVersion === 2 || c.map_status === 'reviewed' || ['user', 'built-in'].includes(c.source);
+  const rows = lib.filter(c => !localIds.has(c.id) && trusted(c));
+  const savedKeys = new Set(savedPlaces().map(CF.placeKey));
+  const shown = places.filter(c => !localIds.has(c.id) && !savedKeys.has(CF.placeKey(c)) && !rows.some(r => r.id === c.id));
   const wrap = document.createElement("div"); wrap.id = "discoverResults";
   wrap.innerHTML = (rows.length ? '<div class="course-section">TDP course library</div>' + rows.map(c=>remoteCard(c,"lib")).join("") : "") +
-    (shown.length ? '<div class="course-section">Courses worldwide — mapping not required</div>' + shown.map(c=>remoteCard(c,"osm")).join("") : "");
+    (shown.length ? '<div class="course-section">Search results</div>' + shown.map(c=>remoteCard(c,"osm")).join("") : "");
   if (tasks[1].status === "rejected") wrap.insertAdjacentHTML("beforeend", '<p class="course-hint">Worldwide search is temporarily unavailable. Saved and library courses are still available. Try again shortly.</p>');
   if (tasks[0].status === 'rejected') wrap.insertAdjacentHTML('beforeend','<p class="course-hint">The course library is temporarily unavailable. Saved courses and worldwide search are still available.</p>');
-  else if (!shown.length && !rows.length) wrap.insertAdjacentHTML("beforeend", '<p class="course-hint">No matches in the course index. Try the club name with its town or country. Some courses are not yet indexed.</p>');
+  else if (!shown.length && !rows.length && !$("courseList").querySelector(".course-item")) wrap.insertAdjacentHTML("beforeend", '<p class="course-hint">No matches in the course index. Try the club name with its town or country. Some courses are not yet indexed.</p>');
   $("discoverResults")?.remove(); $("courseList").appendChild(wrap);
   wrap.querySelectorAll(".remote-item").forEach(el => el.onclick = () => el.dataset.kind === "lib" ? loadFromCatalogue(el.dataset.id) : showPlace(shown.find(c=>c.id===el.dataset.id)));
 }
@@ -1524,49 +1557,6 @@ async function loadFromCatalogue(id) {
     switchCourse(registerCourse(geometry));
   } catch(e) { if(token===discoverSeq)list.textContent = e.message; }
 }
-/* ── finder filters (chips under the search box) ── */
-const GLOBE_URL = localStorage.getItem("tdp.globe.url") || "";
-const finder = { near: null, tour: false, full: false, country: "" };
-const filtersActive = () => !!(finder.near || finder.tour || finder.full || finder.country);
-function syncChips() {
-  $("fNear").classList.toggle("on", !!finder.near);
-  $("fTour").classList.toggle("on", finder.tour);
-  $("fFull").classList.toggle("on", finder.full);
-  $("fCountry").classList.toggle("on", !!finder.country);
-  const c = COURSE.course;
-  $('fGlobe').textContent=GLOBE_URL?'🌐 Globe':'🌐 Course map';
-  $("fGlobe").href = GLOBE_URL?`${GLOBE_URL}#v=2&lat=${c.lat}&lon=${c.lon}&alt=18000&heading=360&pitch=-90&roll=0&map=esri-imagery&l=h`:`https://www.openstreetmap.org/#map=15/${c.lat}/${c.lon}`;
-}
-function qualityBadge(c) {
-  if(c.map_status==='reviewed')return '<span class="ci-q full">REVIEWED</span>';
-  if(c.map_status==='needs_review')return '<span class="ci-q partial">NEEDS REVIEW</span>';
-  const tours = c.coverage?.tours;
-  if (tours && tours.length) return `<span class="ci-q tour" title="${tours.join(", ")}">TOUR</span>`;
-  if (c.quality === "full" && c.coverage?.validationVersion !== 2) return '<span class="ci-q partial">UNREVIEWED</span>';
-  if (c.quality === "outline") return '<span class="ci-q partial">LOCATION ONLY</span>';
-  return c.quality === "partial" ? `<span class="ci-q partial" title="${c.coverage?.holesBuilt || "?"} of ${c.coverage?.holesMapped || "?"} holes mapped">PARTIAL</span>`
-       : `<span class="ci-q full">MAPPED</span>`;
-}
-async function renderFiltered(q, seq) {
-  const list = $("courseList");
-  list.innerHTML = `<div class="course-hint">Searching the TDP library…</div>`;
-  let rows;try {rows=await window.TDPSync.queryCatalogue({ q, ...finder });}
-  catch(e){if(seq===discoverSeq)list.textContent=e.message;return;}
-  if (seq !== discoverSeq) return;
-  const localIds = new Set(allCourses().map((c) => c.id));
-  if (!rows.length) { list.innerHTML = `<div class="course-empty">No courses match those filters${q ? ` and “${esc(q)}”` : ""}.</div>`; return; }
-  const what = [finder.near ? "near you" : "", finder.tour ? "tour venues" : "", finder.full ? "fully mapped" : "", finder.country ? $("fCountry").selectedOptions[0]?.textContent : ""].filter(Boolean).join(" · ");
-  list.innerHTML = `<div class="course-section">${rows.length} courses · ${what}</div>` + rows.map((c) => `
-    <div class="course-item remote-item" data-kind="${localIds.has(c.id) ? "local" : "lib"}" data-id="${esc(c.id)}" data-name="${c.name.replace(/"/g, "&quot;")}">
-      <div class="ci-main">
-        <div class="ci-name">${esc(c.name)}${qualityBadge(c)}</div>
-        <div class="ci-loc">${esc([c.location, c.km != null ? `${Math.round(c.km)} km away` : ""].filter(Boolean).join(" · "))}</div>
-      </div>
-      <div class="ci-go">›</div>
-    </div>`).join("");
-  list.querySelectorAll(".remote-item").forEach((el) => (el.onclick = () =>
-    el.dataset.kind === "local" ? selectCourse(el.dataset.id) : loadFromCatalogue(el.dataset.id)));
-}
 function renderCourseList(q) {
   window.TDPCourseEditor?.close();
   q = (q || "").toLowerCase().trim();
@@ -1576,22 +1566,20 @@ function renderCourseList(q) {
   discoverAbort?.abort();
   previewMap?.remove(); previewMap = null;
   clearTimeout(discoverTimer);
-  syncChips();
-  if (filtersActive() && !q) { renderFiltered(q, discoverSeq); return; }
   if (!q) {
-    // Featured tour courses first, then any courses the player has built.
+    // Saved maps are the quickest route back into the app.
     const featured = all.filter((c) => FEATURED_IDS.includes(c.id));
     const mine = all.filter((c) => !FEATURED_IDS.includes(c.id));
-    let html = `<div class="course-section">Featured courses</div>` + featured.map(courseCard).join("");
-    if (mine.length) html += `<div class="course-section">Your courses</div>` + mine.map(courseCard).join("");
-    const saved = savedPlaces();
-    if (saved.length) html += '<div class="course-section">Saved course locations</div>' + saved.map(c=>remoteCard(c,"osm")).join("");
-    html += `<div class="course-hint">Search by club name and town or country. Courses can be found and saved before they are mapped.</div>`;
+    let html = mine.length ? `<div class="course-section">Your saved maps</div>` + mine.map(courseCard).join("") : "";
+    html += `<div class="course-section">Included course maps</div>` + featured.map(courseCard).join("");
+    const saved = savedPlaces().filter(c => !hasSavedMap(c));
+    if (saved.length) html += '<div class="course-section">Awaiting a course map</div>' + saved.map(c=>remoteCard(c,"osm")).join("");
+    html += `<div class="course-hint">Open a saved map to explore its holes. Search above to add another course.</div>`;
     html += '<div class="auth-actions"><button class="btn" id="editLoadedCourse">Correct loaded course</button><button class="btn" id="mapDrafts">Map drafts</button></div>';
     list.innerHTML = html;
   } else {
     const hits = all.filter((c) => c.name.toLowerCase().includes(q) || (c.loc || "").toLowerCase().includes(q));
-    const saved = savedPlaces().filter(c => `${c.name} ${c.loc || ""}`.toLowerCase().includes(q));
+    const saved = savedPlaces().filter(c => !hasSavedMap(c)).filter(c => `${c.name} ${c.loc || ""}`.toLowerCase().includes(q));
     list.innerHTML = (hits.length ? hits.map(courseCard).join("") : "") + saved.map(c=>remoteCard(c,"osm")).join("");
     if (q.length >= 3) {
       list.insertAdjacentHTML("beforeend", `<div class="course-hint" id="discoverHint">Searching the course library and the map…</div>`);
@@ -1604,7 +1592,7 @@ function renderCourseList(q) {
           list.insertAdjacentHTML("beforeend", `<div class="course-empty">Nothing matched “${esc(q)}” directly.</div>`);
 
       }, 450);
-    } else if (!hits.length) {
+    } else if (!hits.length && !saved.length) {
       list.innerHTML = `<div class="course-empty">Keep typing…</div>`;
     }
   }
@@ -1613,33 +1601,7 @@ function renderCourseList(q) {
   if($('editLoadedCourse'))$('editLoadedCourse').onclick=()=>window.TDPCourseEditor.open({geometry:COURSE,container:list,onClose:()=>renderCourseList('')});
   if($('mapDrafts'))$('mapDrafts').onclick=()=>window.TDPCourseEditor.drafts({container:list,onClose:()=>renderCourseList('')});
 }
-function openCourseModal() { renderCourseList(""); $("courseSearch").value = ""; $("courseModal").classList.remove("hidden"); fillCountries(); }
-let countriesFilled = false;
-async function fillCountries() {
-  if (countriesFilled) return;
-  try {
-    const response = await fetch("data/geofabrik-countries.json");
-    if (!response.ok) return;
-    const {countries} = await response.json();
-    const names = new Intl.DisplayNames([navigator.language || "en"], {type:"region"});
-    const rows = [...new Set(countries.map(c=>c.iso).filter(c=>/^[A-Z]{2}$/.test(c)))].map(cc=>({cc,name:names.of(cc)})).sort((a,b)=>a.name.localeCompare(b.name));
-    countriesFilled=true;
-    for (const c of rows) $("fCountry").add(new Option(c.name,c.cc));
-  } catch(e) { console.warn("Country filter unavailable", e.message); }
-}
-
-$("fTour").onclick = () => { finder.tour = !finder.tour; renderCourseList($("courseSearch").value); };
-$("fFull").onclick = () => { finder.full = !finder.full; renderCourseList($("courseSearch").value); };
-$("fCountry").onchange = (e) => { finder.country = e.target.value; renderCourseList($("courseSearch").value); };
-$("fNear").onclick = () => {
-  if (finder.near) { finder.near = null; renderCourseList($("courseSearch").value); return; }
-  if (!navigator.geolocation) { $("courseList").innerHTML = `<div class="course-empty">Location isn't available on this device.</div>`; return; }
-  $("fNear").textContent = "📍 Locating…";
-  navigator.geolocation.getCurrentPosition(
-    (pos) => { finder.near = [pos.coords.latitude, pos.coords.longitude]; $("fNear").textContent = "📍 Near me"; renderCourseList($("courseSearch").value); },
-    () => { $("fNear").textContent = "📍 Near me"; $("courseList").innerHTML = `<div class="course-empty">Couldn't get your location — allow location access and try again.</div>`; },
-    { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
-};
+function openCourseModal() { renderCourseList(""); $("courseSearch").value = ""; $("courseModal").classList.remove("hidden"); }
 function selectCourse(id) {
   discoverSeq++; discoverAbort?.abort(); clearTimeout(discoverTimer);
   $("courseModal").classList.add("hidden");
@@ -1649,17 +1611,16 @@ function selectCourse(id) {
   switchCourse(id);
 }
 async function buildAndLoad(candidate) {
-  savePlace(candidate);
   refreshRequestProgress(candidate);
   const token = ++discoverSeq;
   const status = $("placeStatus"), button = $("loadPlace");
-  button.disabled = true; status.textContent = "Checking mapped holes for this course…";
+  button.disabled = true; status.textContent = "Preparing your course map… This can take up to 90 seconds.";
+  let locationSaved = false;
   try {
+    savePlace(candidate); locationSaved = true;
     const c = await buildCourseFromOSM(candidate.name, null, candidate);
     if (token !== discoverSeq) return;
     const id = registerCourse(c);
-    await window.TDPSync?.contributeCourse?.(c);
-    if (token !== discoverSeq) return;
     let card = null;
     try { const draft = JSON.parse(localStorage.getItem("tdp.unmatched.card") || "null");
       if (draft?.course?.trim().toLowerCase() === candidate.name.trim().toLowerCase()) card = draft;
@@ -1667,11 +1628,13 @@ async function buildAndLoad(candidate) {
     switchCourse(id, card);
   } catch(e) {
     if (token !== discoverSeq) return;
-    status.textContent = `Course saved. ${e.message}`;
+    if (!locationSaved) { status.textContent = "Device storage is full. Free some space, then try saving this course again."; return; }
+    status.textContent = `This course map could not be opened. ${e.message} The location is saved under “Awaiting a course map”; a location alone does not include playable holes or hazards.`;
     if (Array.isArray(e.layouts) && e.layouts.length) {
+      status.textContent = "This club has more than one layout. Choose the course you want to download:";
       for (const layout of e.layouts) {
         const choice = document.createElement("button"); choice.className="btn"; choice.textContent=layout;
-        choice.onclick=()=>buildAndLoad({...candidate,layout}); status.appendChild(choice);
+        choice.onclick=()=>{ const selected={...candidate,layout};showPlace(selected);buildAndLoad(selected); }; status.appendChild(choice);
       }
       return;
     }
@@ -1679,11 +1642,27 @@ async function buildAndLoad(candidate) {
     status.appendChild(document.createElement("br")); status.appendChild(request);
     request.onclick = async () => {
       request.disabled=true;
-      try { await window.TDPSync.requestCourse(candidate.name, candidate.loc, candidate); status.textContent="Mapping request submitted. The saved course location remains available here."; if (token === discoverSeq) refreshRequestProgress(candidate); }
+      try { await window.TDPSync.requestCourse(candidate.name, candidate.loc, candidate); status.textContent="Mapping request submitted. Find this course under “Awaiting a course map”, then open the completed map when it is ready."; if (token === discoverSeq) refreshRequestProgress(candidate); }
       catch(err) { status.textContent=`Course saved on this device. ${err.message}`; }
     };
   } finally { if (token === discoverSeq) button.disabled=false; }
 }
+window.TDPCourseMaps = {
+  apiBase,
+  openEdited(geometry) {
+    geometry.mapStatus = 'local';
+    geometry.course.revisionId = null;
+    const id = registerCourse(geometry);
+    const key = 'tdp.round.' + id + '.v6';
+    const previous = JSON.parse(localStorage.getItem(key) || 'null');
+    if (previous) {
+      previous.courseGeometry = geometry; previous.course = geometry.course; previous.courseRevisionId = null;
+      previous.holes = Object.fromEntries(geometry.holes.map(h => [h.num, previous.holes[h.num]?.touched ? previous.holes[h.num] : seedHole(h)]));
+      localStorage.setItem(key, JSON.stringify(previous));
+    }
+    switchCourse(id);
+  }
+};
 $("btnCourses").onclick = openCourseModal;
 $("btnCloseCourse").onclick = () => { window.TDPCourseEditor?.close();discoverSeq++; discoverAbort?.abort(); clearTimeout(discoverTimer); previewMap?.remove(); previewMap=null; $("courseModal").classList.add("hidden"); };
 $("courseSearch").oninput = (e) => renderCourseList(e.target.value);
@@ -1692,17 +1671,7 @@ $("courseSearch").oninput = (e) => renderCourseList(e.target.value);
 /* The backend verifies the selected OSM boundary, selects its layout, and assembles holes. */
 async function buildCourseFromOSM(name, card, candidate) {
   if (!candidate) throw new Error("Select the exact course in the course finder first.");
-  const r = await fetch(apiBase() + "/course", {
-    method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name, card: card || null, candidate }),
-    signal: AbortSignal.timeout(90000),
-  });
-  const d = await r.json();
-  if (!r.ok || d.error || !d.holes || !d.holes.length) { const error = new Error(d.error || "couldn't build that course"); error.layouts = d.layouts; throw error; }
-  if (d.identity?.osmType !== candidate.osmType || d.identity?.osmId !== candidate.osmId ||
-      (d.identity?.layout || "") !== (candidate.layout || ""))
-    throw new Error("The mapping service needs updating to preserve the selected course. Your location is saved.");
-  return d;
+  return CF.prepare(candidate, apiBase());
 }
 
 /* ═══════════════ BOOT ═══════════════ */
@@ -1726,6 +1695,10 @@ window.addEventListener("tdp-profile", (e) => {
 });
 $("metaCourse").textContent = `${COURSE.course.name} · ${COURSE.course.teeSet || "White"} tees`;
 gotoHole(COURSE.holes[0].num);
+if (sessionStorage.getItem("tdp.course.openOverview")) {
+  sessionStorage.removeItem("tdp.course.openOverview");
+  fitCourse();
+}
 loadWeather();
 idb.open().then(refreshImages).catch((e) => console.warn("image store unavailable", e));
 // if we just switched course carrying an imported card, apply it now

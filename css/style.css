@@ -484,7 +484,7 @@ table.scoretable { width: 100%; border-collapse: collapse; font-size: 12px; marg
 .ci-loc { font-size: 11.5px; color: var(--txt-3); margin-top: 2px; }
 .ci-live { font-size: 9px; font-weight: 700; letter-spacing: 1px; color: var(--accent); background: var(--accent-soft); padding: 1.5px 6px; border-radius: 6px; vertical-align: 1px; }
 .ci-soon { font-size: 9px; font-weight: 700; letter-spacing: 1px; color: var(--txt-3); background: rgba(255, 255, 255, 0.05); padding: 1.5px 6px; border-radius: 6px; vertical-align: 1px; }
-.ci-go { color: var(--accent); font-size: 20px; }
+.ci-go { color: var(--accent); font-size: 12px; font-weight: 650; flex: 0 0 85px; text-align: right; }
 .ci-tour { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; color: #241a00; background: var(--gold); padding: 1.5px 6px; border-radius: 6px; vertical-align: 1px; margin-right: 2px; }
 .course-section { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--txt-3); margin: 14px 2px 8px; }
 .course-section:first-child { margin-top: 2px; }
@@ -704,20 +704,15 @@ select.auth-input { appearance: none; -webkit-appearance: none; }
 .aim-pill b { color: var(--c); }
 .aim-pill.above { transform: translate(-50%, -28px); }
 
-/* ── course finder filters ── */
-.course-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
-.chip { font: inherit; font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line, rgba(255,255,255,.14));
-  background: transparent; color: var(--txt-2, #cfd6dd); cursor: pointer; text-decoration: none; line-height: 1.2; }
-.chip:hover { border-color: var(--txt-3); color: var(--txt); }
-.chip.on { color: var(--accent); border-color: rgba(35, 198, 139, 0.5); background: var(--accent-soft); }
-.chip-select { appearance: none; -webkit-appearance: none; padding-right: 14px; max-width: 46vw; }
-.ci-q { font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 2px 6px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
-.ci-q.full { background: var(--accent-soft); color: var(--accent); }
-.ci-q.partial { background: rgba(245, 185, 66, 0.16); color: #f5b942; }
-.ci-q.tour { background: rgba(255, 77, 109, 0.16); color: #ff4d6d; }
-
 /* Native buttons in the course finder inherit the app theme. */
-button.course-item { color: var(--txt); font: inherit; }
+button.course-item { color: var(--txt); font: inherit; width: 100%; text-align: left; }
+.course-item .ci-main { min-width: 0; overflow-wrap: anywhere; }
+#courseList .auth-actions { flex-wrap: wrap; }
+#loadPlace { width: 100%; flex-basis: 100%; padding: 14px; }
+.course-hole-marker span { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #102b23; color: #fff; border: 2px solid #8cddb2; font-size: 12px; font-weight: 750; box-shadow: 0 2px 6px #0008; }
+#mapCoverage { position: absolute; bottom: 38px; left: 10px; z-index: 800; max-width: calc(100% - 65px); padding: 6px 9px; border-radius: 8px; background: var(--panel); color: var(--txt-2); font-size: 10px; line-height: 1.5; pointer-events: none; }
+#mapCoverage strong { display: block; color: var(--txt); font-size: 12px; }
+@media (max-width: 900px) { #mapCoverage { bottom: 174px; } }
 #placeStatus .btn { margin: 6px 6px 0 0; }
 
 /* Course corrections remain usable on a phone and on the reviewer's desktop. */
@@ -729,3 +724,38 @@ button.course-item { color: var(--txt); font: inherit; }
 .editor-fields input,.editor-fields select,.editor-fields textarea,.editor-toolbar input,.editor-toolbar select { background:var(--bg,#131b22);color:inherit;border:1px solid var(--line,#41505b);border-radius:7px;padding:10px;min-height:42px;max-width:100%; }
 .editor-toolbar input { width:60px; } #edFeatures { max-width:100%;flex:1;min-width:160px; }
 #edStatus { min-height:40px; } .editor-toolbar .btn { min-height:44px; }
+
+/* Course editing owns the screen; the map stays behind compact drawing controls. */
+body.editing-course { overflow: hidden; }
+#courseEditor .hidden, #strategyStatus.hidden { display: none; }
+#courseEditor { position: fixed; inset: 0; z-index: 3500; background: var(--bg); color: var(--txt); height: 100dvh; }
+#courseEditor #editorMap { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; border-radius: 0; }
+.ed-header { position: absolute; inset: 0 0 auto; z-index: 1100; display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 12px 10px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.ed-header > div { flex: 1; min-width: 0; }
+.ed-header h2 { margin: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#edSaved { font-size: 10px; color: var(--txt-3); }
+.ed-header .btn { min-height: 44px; padding: 8px 10px; }
+.ed-map-actions { position: absolute; top: calc(80px + env(safe-area-inset-top)); left: 12px; z-index: 1000; display: flex; gap: 8px; }
+.ed-map-actions .btn { background: var(--panel); }
+#courseEditor .leaflet-top { top: calc(120px + env(safe-area-inset-top)); }
+#courseEditor .leaflet-bottom { bottom: 230px; }
+.ed-controls { position: absolute; bottom: 0; left: 0; right: 0; z-index: 1100; background: var(--panel); border-top: 1px solid var(--line); padding: 8px 12px calc(10px + env(safe-area-inset-bottom)); }
+#courseEditor #edStatus { min-height: 0; margin: 0 0 8px; font-size: 12px; line-height: 1.4; }
+.ed-palette { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 5px; }
+.ed-tool { flex: 0 0 auto; display: flex; align-items: center; gap: 5px; padding: 10px; min-height: 44px; color: var(--txt); border: 1px solid var(--line); border-radius: 10px; background: var(--bg-2); font-size: 12px; }
+.ed-tool i { width: 10px; height: 10px; border-radius: 3px; background: var(--feature-colour); }
+.ed-tool[aria-pressed=true] { border-color: var(--feature-colour); background: var(--accent-soft); }
+#courseEditor .editor-toolbar { margin: 5px 0 0; gap: 6px; }
+#courseEditor .ed-selection { flex-wrap: nowrap; }
+#courseEditor #edFeatures { min-width: 65px; width: 100px; font-size: 11px; }
+#courseEditor .ed-selection label { display: flex; align-items: center; gap: 3px; font-size: 11px; }
+#courseEditor .ed-selection input { width: 44px; padding: 6px; }
+#courseEditor .ed-drawing { justify-content: flex-end; }
+#courseEditor #edDraw { display: none; }
+#courseEditor .ed-drawing .btn { flex: 1; }
+#courseEditor.is-drawing #edFeatures, #courseEditor.is-drawing #edDelete, #courseEditor.is-drawing #edAssign { display: none; }
+#edDrawer { position: absolute; z-index: 1200; top: calc(76px + env(safe-area-inset-top)); right: 12px; bottom: 225px; width: min(390px, calc(100% - 24px)); padding: 14px; overflow: auto; background: var(--bg-2); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+#edDrawer .editor-fields { grid-template-columns: repeat(2,minmax(0,1fr)); }
+#edDrawer input, #edDrawer textarea { width: 100%; }
+#strategyStatus { position: absolute; z-index: 1000; top: 80px; left: 12px; max-width: min(330px,calc(100% - 112px)); background: var(--panel); padding: 9px 12px; border-radius: 10px; font-size: 12px; line-height: 1.4; }
+@media (max-width: 900px) { #strategyStatus { top: 125px; } }

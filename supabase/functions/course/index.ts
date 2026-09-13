@@ -9,5 +9,5 @@ Deno.serve(async req=>{
   try {input=await req.json();candidate=validateCandidate(input?.candidate);} catch {return json({error:'Select a course location from the finder first.'},400);}
   try {
     return json(input.action==='source'?await courseSource(candidate):await buildSelectedCourse(candidate,input.card));
-  } catch(e) {return json({error:String(e.message),layouts:e.layouts||undefined},e.status||422);}
+  } catch(e) {return json({error:String(e.message),layouts:e.layouts||undefined,...(input.action==='source'&&e.rawElements?{rawElements:e.rawElements}: {})},e.status||422);}
 });
