@@ -1,3 +1,9 @@
+## Continuation — 13 September 2026, build 15 (live terrain in the app, download diagnostics)
+
+- **Live course terrain in the app.** `js/course-terrain.js` brings the God's Eye painting into the Leaflet maps: below zoom 14 it downloads the OpenStreetMap tees, greens, fairways, bunkers and water for the tiles in view straight from the public Overpass mirrors and draws them (canvas, own pane) underneath the app's layers, for every course in view whether or not it has been downloaded. It runs on the main map (new Terrain toggle next to Heat/Aim, remembered per device), on the finder's course preview (see the real holes before saving) and under the editor (trace on top of what OSM already has). Same colours as the globe: fairway green with outline, greens light green, tees yellow with a marker, bunkers sand, water blue.
+- **Downloads explain themselves.** If every map mirror and the course service fail, the finder now says what each mirror answered (HTTP status, timeout) and offers a "Try the download again" button instead of a generic message. Module imports inside `course-finder.js` resolve against the script's own URL, so they behave identically in Safari/WKWebView and Chrome.
+- Verified: 23 unit regressions, the mobile browser regression (now also checks live terrain tiles, the toggle and canvas layer), live Augusta search → layout → download (2.6 s) and the editor flow. Not verified on a physical iPhone in this run.
+
 ## Continuation — 13 September 2026 (aim, Augusta download, full-screen editor)
 
 - The numbered hole badges on the main map were removed at Lennon's request (build 14); the hole rail at the top already carries them. The faint routing and greens of the whole course remain.

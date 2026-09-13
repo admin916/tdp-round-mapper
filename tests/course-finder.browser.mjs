@@ -19,7 +19,7 @@ try {
   browser=await puppeteer.launch({headless:true});
   const page=await browser.newPage();await page.setViewport({width:390,height:844});
   let mapped = null, mappingRequest = null;
-  const errors=[],builds=[],requests=[];page.on('pageerror',e=>{errors.push(e.message);console.error('PAGE ERROR',e.message);});
+  const errors=[],builds=[],requests=[],terrainTiles=[];page.on('pageerror',e=>{errors.push(e.message);console.error('PAGE ERROR',e.message);});
   // Overpass-shaped source for club way 2: nine holes numbered 1-4 and 6-10 (5 is unmapped), each with a green, fairway and bunker.
   const ring=(lat,lon,d)=>[{lat:lat-d,lon:lon-d},{lat:lat+d,lon:lon-d},{lat:lat+d,lon:lon+d},{lat:lat-d,lon:lon+d},{lat:lat-d,lon:lon-d}];
   const osmSource=()=>{
@@ -42,7 +42,9 @@ try {
     if(req.method()==='OPTIONS') return respond({});
     if(url.startsWith(origin)) return req.continue();
     if(url.includes('photon.komoot.io')) return respond({features:[1,2].map(id=>({geometry:{coordinates:[-.6-id*.01,51.3]},properties:{name:'Example Golf Club',osm_type:'W',osm_id:id,city:id===1?'London':'Other town',countrycode:'gb'}}))});
-    if(url.includes('overpass')) {builds.push(decodeURIComponent(req.postData()));return respond({elements:mapped?osmSource():[osmSource()[0]]});}
+    if(url.includes('overpass')) {const ql=decodeURIComponent(req.postData());
+      if(/way\(2\)/.test(ql)) {builds.push(ql);return respond({elements:mapped?osmSource():[osmSource()[0]]});}
+      terrainTiles.push(ql);return respond({elements:osmSource().filter(e=>e.tags.golf)});}   // live terrain overlay tiles
     if(url.endsWith('/course')) return respond({error:'The map service is busy.'},503);
     if(url.includes('/course_requests') && req.method()==='POST') {requests.push(JSON.parse(req.postData()));mappingRequest={id:1,status:'pending',attempts:0};return respond({});}
     if(url.includes('/course_requests')) return respond(mappingRequest ? [mappingRequest] : []);
@@ -99,6 +101,13 @@ try {
   const renderedTerrain=await page.evaluate(()=>{const count={fairway:0,bunker:0};window.TDPMap.leaflet().eachLayer(l=>{if(l.options?.fillColor==='#3f9e5f')count.fairway++;if(l.options?.fillColor==='#e8d9a8')count.bunker++;});return count;});
   assert.equal(renderedTerrain.fairway,savedGeometry.overlays.fairway.length,'fairways are drawn on the main map');
   assert.equal(renderedTerrain.bunker,savedGeometry.overlays.bunker.length,'bunkers are drawn on the main map');
+  assert.ok(terrainTiles.length>0,'live OSM terrain tiles are requested for the main map');
+  assert.equal(await page.$eval('#btnTerrain',el=>el.classList.contains('on')),true,'live terrain is on by default');
+  const liveShapes=()=>page.evaluate(()=>{let n=0;window.TDPMap.leaflet().eachLayer(l=>{if(l.options?.pane==='terrainPane'&&l.options?.fillColor)n++;});return n;});
+  assert.ok(await liveShapes()>0,'live terrain polygons are drawn in their own pane');
+  await page.click('#btnTerrain');
+  assert.equal(await liveShapes(),0,'terrain toggle hides the live layer');
+  await page.click('#btnTerrain');
   await Promise.all([page.evaluate(()=>new Promise(r=>window.TDPMap.leaflet().once('moveend',()=>r(true)))),page.click('#btnCourse')]);
   assert.ok(await page.evaluate(()=>document.querySelector('#mapCoverage').getBoundingClientRect().bottom < document.querySelector('#panel').getBoundingClientRect().top),'course name and coverage sit above the mobile shot panel');
   if(process.argv.includes('--screenshots')){await mkdir(resolve(root,'build/course-finder-ui'),{recursive:true});await page.screenshot({path:resolve(root,'build/course-finder-ui/map.png')});}

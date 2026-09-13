@@ -52,6 +52,7 @@ window.TDPCourseEditor=(()=>{
     const streets=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
     L.control.layers({Satellite:satellite,'Street map':streets},null,{position:'topright'}).addTo(map);
     L.control.zoom({position:'topright'}).addTo(map);
+    window.TDPTerrainOverlay?.attach(map,{minZoom:13});   // live OSM terrain underneath the shapes being traced
     layer.addTo(map);handles.addTo(map);temporary.addTo(map);
     const stash=()=>{history.push(JSON.stringify(draft));history=history.slice(-40);};
     function fields() {

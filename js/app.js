@@ -488,6 +488,17 @@ const OVERLAY_STYLE = {
     L.polygon(poly, { ...OVERLAY_STYLE[k], renderer: canvas, interactive: false }).addTo(map));
 });
 
+/* Live OpenStreetMap terrain for every course in view (same painting as the God's Eye globe),
+   drawn in a pane below the loaded course's own overlays. Toggle persists per device. */
+const terrainOn = localStorage.getItem("tdp.terrain.live") !== "off";
+const terrainBtn = document.getElementById("btnTerrain");
+let terrain = null;   // assigned below; attach() reports status synchronously
+terrain = window.TDPTerrainOverlay.attach(map, { enabled: terrainOn, onStatus: (st) => {
+  terrainBtn.classList.toggle("on", terrain ? terrain.enabled() : terrainOn);
+  terrainBtn.title = st.zoomedOut ? "Zoom in to load live course terrain" : `Live terrain: ${st.shapes} shapes${st.loading ? ` · loading ${st.loading}` : ""}${st.error ? ` · ${st.error}` : ""}`;
+} });
+terrainBtn.classList.toggle("on", terrainOn);
+terrainBtn.onclick = () => { const v = !terrain.enabled(); terrain.setEnabled(v); localStorage.setItem("tdp.terrain.live", v ? "on" : "off"); terrainBtn.classList.toggle("on", v); };
 const courseHoleLayer = L.layerGroup().addTo(map);
 COURSE.holes.forEach(h => {
   L.polyline(h.line, {color: '#a8e6be', weight: 2, opacity: 0.7, interactive: false}).addTo(courseHoleLayer);
@@ -1473,6 +1484,7 @@ function showPlace(c) {
   L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     {attribution:"Imagery © Esri, Maxar, Earthstar Geographics · Course location © OpenStreetMap contributors"}).addTo(previewMap);
   L.marker([c.lat,c.lon]).addTo(previewMap);
+  window.TDPTerrainOverlay.attach(previewMap, { minZoom: 13 });
   $("backPlaces").onclick = () => renderCourseList($("courseSearch").value);
   $("loadPlace").onclick = () => buildAndLoad(c);
   $('editPlace').onclick=()=>{previewMap?.remove();previewMap=null;window.TDPCourseEditor.open({candidate:c,container:list,onClose:()=>showPlace(c)});};
@@ -1628,6 +1640,7 @@ async function buildAndLoad(candidate) {
     if (token !== discoverSeq) return;
     if (!locationSaved) { status.textContent = "Device storage is full. Free some space, then try saving this course again."; return; }
     status.textContent = `This course map could not be opened. ${e.message} The location is saved under “Awaiting a course map”; a location alone does not include playable holes or hazards.`;
+    if (e.retryable) { const retry = document.createElement("button"); retry.className = "btn primary"; retry.textContent = "Try the download again"; retry.onclick = () => buildAndLoad(candidate); status.appendChild(document.createElement("br")); status.appendChild(retry); }
     if (Array.isArray(e.layouts) && e.layouts.length) {
       status.textContent = "This club has more than one layout. Choose the course you want to download:";
       for (const layout of e.layouts) {
