@@ -99,6 +99,34 @@ export function buildCourseData(name, location, els, card, opts = {}) {
       green: { poly: ring(best.geometry), polygons:best.polygons?.map(p=>p.map(ring)), centre: [r6(gC.lat), r6(gC.lon)], approach: Math.round(b * 10) / 10, depth: Math.round(xA - mA), width: Math.round(xB - mB), frontOffset: Math.round(-mA) } };
   }).filter(Boolean);
   if (holes.length < minHoles) throw new Error(`only ${holes.length} holes fully mapped in OpenStreetMap yet`);
+  // Tee boxes: until a scorecard says which set is being played, every hole starts from the
+  // furthest-back mapped tee (the championship box). A tee belongs to a hole when it sits near
+  // the start of that hole's routing and is not nearer to another hole's start.
+  const teeName = (t) => [t.name, t.colour, t["golf:tee"], t.ref].map((v) => String(v || "").trim()).find((v) => v && !/^\d+$/.test(v)) || "";   // a bare hole number is not a tee name
+  const teeBoxes = [...kind("tee").map((t) => ({ ...CEN(t.geometry), name: teeName(t.tags) })),
+    ...els.filter((e) => e.type === "node" && e.tags?.golf === "tee" && Number.isFinite(e.lat)).map((t) => ({ lat: t.lat, lon: t.lon, name: teeName(t.tags) }))];
+  const starts = holes.map((h) => ({ lat: h.tee[0], lon: h.tee[1] }));
+  let holesWithBackTee = 0;
+  for (const h of holes) {
+    const start = { lat: h.tee[0], lon: h.tee[1] }, greenC = { lat: h.green.centre[0], lon: h.green.centre[1] };
+    // corridor along the first leg of the routing: up to 80 m behind the line start, 120 m ahead, 30 m either side
+    const next = { lat: h.line[1][0], lon: h.line[1][1] }, kLat = 111132, kLon = 111320 * Math.cos(toR(start.lat));
+    const ax = (next.lon - start.lon) * kLon, ay = (next.lat - start.lat) * kLat, al = Math.hypot(ax, ay) || 1;
+    const mine = teeBoxes.filter((t) => {
+      const x = (t.lon - start.lon) * kLon, y = (t.lat - start.lat) * kLat;
+      const along = (x * ax + y * ay) / al, across = Math.abs(x * ay - y * ax) / al;
+      const d = HAV(t, start);
+      return along > -80 && along < 120 && across < 30 && !starts.some((o) => o !== start && HAV(t, o) + 10 < d);
+    });
+    if (!mine.length) continue;
+    const rest = h.line.slice(1).map(([lat, lon]) => ({ lat, lon }));
+    const options = mine.map((t) => ({ ...t, metres: Math.round(len([t, ...rest])), toGreen: HAV(t, greenC) })).sort((a, b) => b.toGreen - a.toGreen);
+    const back = options[0];
+    h.tees = options.map((t) => ({ lat: r6(t.lat), lon: r6(t.lon), name: t.name, metres: t.metres }));
+    h.tee = [r6(back.lat), r6(back.lon)]; h.line = [h.tee, ...h.line.slice(1)]; h.metres = back.metres;
+    h.teeSource = "osm-back-tee"; h.teeName = back.name || "Back tee";
+    holesWithBackTee++;
+  }
   const tc = CEN(holes.map((h) => ({ lat: h.tee[0], lon: h.tee[1] })));
   const polygons=e=>e.polygons?e.polygons.map(p=>p.map(ring)):[ring(e.geometry)];
   const ov = (k) => kind(k).flatMap(polygons);
@@ -111,13 +139,14 @@ export function buildCourseData(name, location, els, card, opts = {}) {
     expectedHoles, holeRefs: holes.map(h => h.num),
     missingGreens: refs.filter(n => !holes.some(h => h.num === n)),
     validationVersion: 2,
+    teeSelection: "back", holesWithBackTee, teeBoxes: teeBoxes.length,
     parFromMap, parFromCard, siFromMap, siFromCard: Object.keys(cardBy).length,
     overlays: Object.fromEntries(Object.entries(overlays).map(([k, v]) => [k, v.length])),
     ratingSource: card?.slope && card?.rating ? "card" : "unknown",
     features:Object.fromEntries(Object.entries(overlays).map(([k,v])=>[k,{source:'OpenStreetMap',observed:v.length,completeness:'unknown'}])),
   };
   return {
-    course: { name, location, lat: r6(tc.lat), lon: r6(tc.lon), teeSet: "White", units: "metres",
+    course: { name, location, lat: r6(tc.lat), lon: r6(tc.lon), teeSet: holesWithBackTee ? "Back" : "Unspecified", units: "metres",
       par: holes.reduce((s, h) => s + h.par, 0), totalMetres: holes.reduce((s, h) => s + h.metres, 0),
       slope: card?.slope ?? null, rating: card?.rating ?? null },
     holes, overlays, coverage, trees:els.filter(e=>e.tags?.natural==='tree' && Number.isFinite(e.lat)).map(e=>[e.lat,e.lon]),

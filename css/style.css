@@ -758,3 +758,4 @@ body.editing-course { overflow: hidden; }
 #edDrawer input, #edDrawer textarea { width: 100%; }
 #strategyStatus { position: absolute; z-index: 1000; top: 80px; left: 12px; max-width: min(330px,calc(100% - 112px)); background: var(--panel); padding: 9px 12px; border-radius: 10px; font-size: 12px; line-height: 1.4; }
 @media (max-width: 900px) { #strategyStatus { top: 125px; } }
+.tee-label { border-color: #ffd400; color: #ffe88a; transform: translate(-50%, 14px); }

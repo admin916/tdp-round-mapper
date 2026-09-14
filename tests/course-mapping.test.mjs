@@ -61,6 +61,21 @@ test('eighteen consecutive mapped holes establish an 18-hole layout without an o
   const nine=fixture();delete nine[0].tags.holes;
   assert.equal(buildCourseData('Test','',nine,null,{expectedHoles:null,minHoles:1}).coverage.expectedHoles,null);
 });
+test('holes start from the furthest-back mapped tee until a card picks a set',()=>{
+  const data=fixture();
+  for(let n=1;n<=9;n++) {
+    const lat=51+n*.003;   // hole n runs from lat-.001 (line start) north to lat
+    data.push({type:'way',id:5000+n,tags:{golf:'tee',name:'White'},geometry:ring(lat-.001,0,.00003)});           // at the line start
+    data.push({type:'way',id:6000+n,tags:{golf:'tee',name:'Championship'},geometry:ring(lat-.0013,0,.00003)});   // ~33 m further back
+  }
+  const b=buildCourseData('Test','',data,null,{expectedHoles:9,minHoles:1});
+  const h=b.holes[0];
+  assert.equal(h.teeSource,'osm-back-tee');assert.equal(h.teeName,'Championship');
+  assert.ok(Math.abs(h.tee[0]-(51.003-.0013))<2e-5,'tee moved to the back box');
+  assert.ok(h.metres>=140&&h.metres<=150,`playing length measured from the back tee (${h.metres})`);
+  assert.equal(h.tees.length,2);assert.equal(h.tees[0].name,'Championship');assert.equal(h.tees[1].name,'White');
+  assert.equal(b.course.teeSet,'Back');assert.equal(b.coverage.holesWithBackTee,9);assert.equal(b.coverage.teeSelection,'back');
+});
 test('legacy catalogue corruption is rejected on load',()=>{
   const b=buildCourseData('Test','',fixture(),null);
   b.holes[1].osmRef=1;

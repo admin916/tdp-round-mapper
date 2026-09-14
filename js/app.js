@@ -535,6 +535,10 @@ function drawHole(fit) {
     mapObjs.push(lbl);
   }
 
+  // which tee box the hole is measured from (furthest-back mapped tee until a card says otherwise)
+  if (hole.teeSource && !st.touched) {
+    mapObjs.push(L.marker(hole.tee, { interactive: false, icon: L.divIcon({ className: "seg-anchor", html: `<div class="seg-label tee-label">${esc(hole.teeName || "Back tee")}<small>${(hole.tees || []).length > 1 ? `${hole.tees.length} tee boxes` : "tee"}</small></div>`, iconSize: [0, 0] }) }).addTo(map));
+  }
   // waypoint markers
   wps.forEach((p, i) => {
     const cls = "wp-dot" + (i === 0 ? " tee" : "") + (i === selShot ? " selected" : "");
@@ -1660,20 +1664,37 @@ async function buildAndLoad(candidate) {
 }
 window.TDPCourseMaps = {
   apiBase,
-  openEdited(geometry) {
-    geometry.mapStatus = 'local';
-    geometry.course.revisionId = null;
+  /* Store new geometry for a course and carry the round across: holes already played keep
+     their shots, untouched holes are re-seeded from the new routing (new tee positions). */
+  replaceGeometry(geometry) {
     const id = registerCourse(geometry);
     const key = 'tdp.round.' + id + '.v6';
     const previous = JSON.parse(localStorage.getItem(key) || 'null');
     if (previous) {
-      previous.courseGeometry = geometry; previous.course = geometry.course; previous.courseRevisionId = null;
+      previous.courseGeometry = geometry; previous.course = geometry.course; previous.courseRevisionId = geometry.course.revisionId || null;
       previous.holes = Object.fromEntries(geometry.holes.map(h => [h.num, previous.holes[h.num]?.touched ? previous.holes[h.num] : seedHole(h)]));
       localStorage.setItem(key, JSON.stringify(previous));
     }
-    switchCourse(id);
+    return id;
+  },
+  openEdited(geometry) {
+    geometry.mapStatus = 'local';
+    geometry.course.revisionId = null;
+    switchCourse(this.replaceGeometry(geometry));
   }
 };
+/* Maps downloaded before tee selection existed start holes wherever the OSM line began.
+   Re-download such a map once (2–3 s) so it starts from the furthest-back tee like new maps. */
+(async () => {
+  const identity = COURSE.identity, flag = "tdp.tee.refresh." + COURSE_ID;
+  if (identity?.provider !== "osm" || COURSE.coverage?.teeSelection || COURSE.mapStatus === "local" || !navigator.onLine || sessionStorage.getItem(flag)) return;
+  sessionStorage.setItem(flag, "1");
+  try {
+    const built = await CF.prepare(identity, apiBase());
+    built.course.id = COURSE_ID; built.course.name = COURSE.course.name;
+    if (!CF.mappingError(built) && built.coverage?.holesWithBackTee) { window.TDPCourseMaps.replaceGeometry(built); location.reload(); }
+  } catch (e) { console.warn("tee refresh skipped", e.message); }
+})();
 $("btnCourses").onclick = openCourseModal;
 $("btnCloseCourse").onclick = () => { window.TDPCourseEditor?.close();discoverSeq++; discoverAbort?.abort(); clearTimeout(discoverTimer); previewMap?.remove(); previewMap=null; $("courseModal").classList.add("hidden"); };
 $("courseSearch").oninput = (e) => renderCourseList(e.target.value);
